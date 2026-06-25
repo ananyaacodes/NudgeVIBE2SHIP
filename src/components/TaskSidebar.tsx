@@ -29,18 +29,22 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [newDueDate, setNewDueDate] = useState('');
+  const [newDatePart, setNewDatePart] = useState('');
+  const [newTimePart, setNewTimePart] = useState('');
   const [newPriority, setNewPriority] = useState<Task['priority']>('medium');
   const [newCategory, setNewCategory] = useState('assignment');
   const [filter, setFilter] = useState<'all' | 'pending' | 'in-progress' | 'completed'>('all');
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle || !newDueDate) return;
+    if (!newTitle || !newDatePart || !newTimePart) return;
     try {
-      await onAddTask(newTitle, newDueDate, newPriority, newCategory);
+      const combinedDueDate = `${newDatePart}T${newTimePart}`;
+      await onAddTask(newTitle, combinedDueDate, newPriority, newCategory);
       setNewTitle('');
-      setNewDueDate('');
+      setNewDatePart('');
+      setNewTimePart('');
       setNewPriority('medium');
       setNewCategory('assignment');
       setIsAdding(false);
@@ -141,30 +145,42 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-[11px] text-indigo-300/50 mb-1 font-medium">Due Date & Time</label>
+                  <label className="block text-[11px] text-indigo-300/50 mb-1 font-medium">Due Date</label>
                   <input
-                    type="datetime-local"
+                    type="date"
                     required
-                    value={newDueDate}
-                    onChange={e => setNewDueDate(e.target.value)}
-                    className="w-full bg-[#0c0926] border border-[#251e4d]/60 rounded-lg px-2 py-1 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                    value={newDatePart}
+                    onChange={e => setNewDatePart(e.target.value)}
+                    className="w-full bg-[#0c0926] border border-[#251e4d]/60 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-violet-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-indigo-300/50 mb-1 font-medium">Category</label>
-                  <select
-                    value={newCategory}
-                    onChange={e => setNewCategory(e.target.value)}
-                    className="w-full bg-[#0c0926] border border-[#251e4d]/60 rounded-lg px-2 py-1 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-violet-500"
-                  >
-                    <option value="assignment">Assignment</option>
-                    <option value="bill">Bill/Payment</option>
-                    <option value="meeting">Meeting</option>
-                    <option value="interview">Interview</option>
-                    <option value="commitment">Commitment</option>
-                    <option value="general">General</option>
-                  </select>
+                  <label className="block text-[11px] text-indigo-300/50 mb-1 font-medium">Due Time</label>
+                  <input
+                    type="time"
+                    required
+                    value={newTimePart}
+                    onChange={e => setNewTimePart(e.target.value)}
+                    className="w-full bg-[#0c0926] border border-[#251e4d]/60 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-violet-500 animate-none"
+                  />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-indigo-300/50 mb-1 font-medium">Category</label>
+                <select
+                  value={newCategory}
+                  onChange={e => setNewCategory(e.target.value)}
+                  className="w-full bg-[#0c0926] border border-[#251e4d]/60 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                >
+                  <option value="assignment">Assignment</option>
+                  <option value="exam">Exam</option>
+                  <option value="bill">Bill/Payment</option>
+                  <option value="meeting">Meeting</option>
+                  <option value="interview">Interview</option>
+                  <option value="commitment">Commitment</option>
+                  <option value="general">General</option>
+                </select>
               </div>
 
               <div>
@@ -217,10 +233,15 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
       </div>
 
       {/* Task List container */}
-      <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
+      <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2 min-h-[400px] md:min-h-0 [-webkit-overflow-scrolling:touch]">
         {filteredTasks.length === 0 ? (
-          <div className="text-center py-8 text-xs text-indigo-300/40 font-medium">
-            No deadlines in this view.
+          <div className="text-center py-10 px-4 flex flex-col items-center justify-center">
+            <span className="text-zinc-200 font-bold text-xs md:text-sm block mb-1">
+              No deadlines in this view.
+            </span>
+            <p className="text-indigo-200/50 text-[11px] font-normal leading-relaxed max-w-[240px]">
+              All clear! Ask Nudge to automatically sync your upcoming schedule or click '+ Add Task' to begin guarding your time.
+            </p>
           </div>
         ) : (
           <AnimatePresence initial={false}>
@@ -309,16 +330,33 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                     </div>
 
                     {/* Delete action */}
-                    <button
-                      onClick={() => {
-                        if (window.confirm(`Delete deadline "${task.title}"?`)) {
-                          onDeleteTask(task.id!);
-                        }
-                      }}
-                      className="text-indigo-300/40 hover:text-red-400 p-1 rounded-md hover:bg-red-950/15 transition-all self-start shrink-0 cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {deletingTaskId === task.id ? (
+                      <div className="flex flex-col sm:flex-row items-center gap-1 shrink-0 self-start mt-0.5">
+                        <button
+                          onClick={() => {
+                            onDeleteTask(task.id!);
+                            setDeletingTaskId(null);
+                          }}
+                          className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-[9px] px-2 py-1 rounded transition-all cursor-pointer"
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          onClick={() => setDeletingTaskId(null)}
+                          className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-[9px] px-2 py-1 rounded transition-all cursor-pointer border border-[#251e4d]/40"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setDeletingTaskId(task.id!)}
+                        className="text-indigo-300/40 hover:text-red-400 p-1 rounded-md hover:bg-red-950/15 transition-all self-start shrink-0 cursor-pointer"
+                        title="Delete task"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </motion.div>
               );

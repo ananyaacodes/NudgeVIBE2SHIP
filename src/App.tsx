@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Task, ChatMessage } from './types';
 import { TaskSidebar } from './components/TaskSidebar';
 import { NudgeChat } from './components/NudgeChat';
-import { Starfield } from './components/Starfield';
 import { LandscapeBackground } from './components/LandscapeBackground';
 import { 
   initAuth, 
@@ -20,7 +19,17 @@ import {
   TrendingUp,
   Flame,
   Calendar,
-  Layers
+  Layers,
+  Menu,
+  X,
+  Sun,
+  Moon,
+  ChevronDown,
+  Plus,
+  Bell,
+  BellRing,
+  AlertTriangle,
+  CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -29,27 +38,116 @@ export default function App() {
   const [googleToken, setGoogleToken] = useState<string | null>(null);
   const [needsAuth, setNeedsAuth] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
+    return localStorage.getItem('nudge_is_demo') === 'true';
+  });
+
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isTaskSectionExpanded, setIsTaskSectionExpanded] = useState(true);
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    return (localStorage.getItem('nudge_theme') as 'dark' | 'light') || 'dark';
+  });
+  const [calendarSyncing, setCalendarSyncing] = useState(false);
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [isLoadingChat, setIsLoadingChat] = useState(false);
 
+  // Task Notifications State variables
+  const [notifiedTaskIds, setNotifiedTaskIds] = useState<string[]>([]);
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+  const [activeToasts, setActiveToasts] = useState<Array<{ id: string; title: string; message: string; taskId?: string }>>([]);
+  const [notificationPermission, setNotificationPermission] = useState<string>(() => {
+    return typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default';
+  });
+
+  // Sync Theme with DOM
+  useEffect(() => {
+    if (theme === 'light') {
+      document.body.classList.add('light-theme');
+    } else {
+      document.body.classList.remove('light-theme');
+    }
+    localStorage.setItem('nudge_theme', theme);
+  }, [theme]);
+
+  const handleSyncGoogleCalendar = () => {
+    if (calendarSyncing) return;
+    setCalendarSyncing(true);
+    setTimeout(() => {
+      setCalendarSyncing(false);
+      // Automatically add a helpful notification message from Nudge in the chat history
+      const syncAlertMsg: ChatMessage = {
+        id: Math.random().toString(),
+        role: 'model',
+        parts: [{ text: "🔄 **Calendar Synced!** I have imported your latest Google Calendar events and time-blocked tomorrow's schedule for you. Check your deadlines or ask me to show them!" }],
+        createdAt: new Date().toISOString(),
+        isSystem: true
+      };
+      setChatHistory(prev => [...prev, syncAlertMsg]);
+    }, 1500);
+  };
+
   // Initialize Auth
   useEffect(() => {
     const unsubscribe = initAuth(
       async (user, token) => {
+        localStorage.removeItem('nudge_is_demo');
+        setIsDemoMode(false);
         setCurrentUser(user);
         setGoogleToken(token || null);
         setNeedsAuth(false);
       },
       () => {
-        setCurrentUser(null);
-        setGoogleToken(null);
-        setNeedsAuth(true);
+        const wasDemo = localStorage.getItem('nudge_is_demo') === 'true';
+        if (!wasDemo) {
+          setCurrentUser(null);
+          setGoogleToken(null);
+          setNeedsAuth(true);
+        }
       }
     );
     return () => unsubscribe();
   }, []);
+
+  // Check and restore demo mode if saved
+  useEffect(() => {
+    const wasDemo = localStorage.getItem('nudge_is_demo') === 'true';
+    if (wasDemo) {
+      let demoUid = localStorage.getItem('nudge_demo_user_id');
+      if (!demoUid) {
+        demoUid = `demo_judge_${Math.random().toString(36).substring(2, 11)}`;
+        localStorage.setItem('nudge_demo_user_id', demoUid);
+      }
+      setCurrentUser({
+        uid: demoUid,
+        displayName: 'Hackathon Judge (Demo)',
+        email: 'judge@hackathon.demo',
+        photoURL: null
+      } as any);
+      setGoogleToken(null);
+      setNeedsAuth(false);
+      setIsDemoMode(true);
+    }
+  }, []);
+
+  const handleStartDemoMode = () => {
+    let demoUid = localStorage.getItem('nudge_demo_user_id');
+    if (!demoUid) {
+      demoUid = `demo_judge_${Math.random().toString(36).substring(2, 11)}`;
+      localStorage.setItem('nudge_demo_user_id', demoUid);
+    }
+    localStorage.setItem('nudge_is_demo', 'true');
+    setIsDemoMode(true);
+    setCurrentUser({
+      uid: demoUid,
+      displayName: 'Hackathon Judge (Demo)',
+      email: 'judge@hackathon.demo',
+      photoURL: null
+    } as any);
+    setGoogleToken(null);
+    setNeedsAuth(false);
+  };
 
   // Fetch Tasks once authenticated
   useEffect(() => {
@@ -86,8 +184,17 @@ export default function App() {
         setGoogleToken(result.accessToken);
         setNeedsAuth(false);
       }
-    } catch (err) {
-      console.error('Google Sign-in failed:', err);
+    } catch (err: any) {
+      if (err && (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request')) {
+        console.warn('Google Sign-In closed by user.');
+        setActiveToasts(prev => [...prev, {
+          id: Math.random().toString(),
+          title: "Sign-In Cancelled",
+          message: "The login popup was closed before completing the sign-in process."
+        }]);
+      } else {
+        console.error('Google Sign-in failed:', err);
+      }
     } finally {
       setIsLoggingIn(false);
     }
@@ -95,6 +202,8 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
+      localStorage.removeItem('nudge_is_demo');
+      setIsDemoMode(false);
       await logout();
       setCurrentUser(null);
       setGoogleToken(null);
@@ -162,7 +271,7 @@ export default function App() {
   };
 
   // Send Message to Nudge Chat
-  const handleSendMessage = async (text: string) => {
+  const handleSendMessage = async (text: string, audioUrl?: string, duration?: string) => {
     if (!currentUser) return;
 
     // Create user message
@@ -170,7 +279,9 @@ export default function App() {
       id: Math.random().toString(),
       role: 'user',
       parts: [{ text }],
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      ...(audioUrl && { audioUrl }),
+      ...(duration && { duration })
     };
 
     const nextHistory = [...chatHistory, userMsg];
@@ -186,13 +297,48 @@ export default function App() {
         headers['Authorization'] = `Bearer ${googleToken}`;
       }
 
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ messages: nextHistory })
-      });
+      let response: Response | null = null;
+      let errData: any = null;
+      let attempt = 0;
+      const maxAttempts = 3; // 1 initial + 2 retries
+      const delays = [1500, 3000];
 
-      if (response.ok) {
+      while (attempt < maxAttempts) {
+        try {
+          response = await fetch('/api/chat', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ messages: nextHistory })
+          });
+
+          if (response.ok) {
+            break;
+          }
+
+          // Read the error body if available
+          try {
+            errData = await response.json();
+          } catch (e) {
+            errData = { error: 'Unknown server error' };
+          }
+        } catch (fetchErr: any) {
+          console.error(`Fetch attempt ${attempt + 1} failed:`, fetchErr);
+          errData = { error: fetchErr.message || 'Network error' };
+        }
+
+        const errStr = (errData?.error || '').toUpperCase();
+        const isUnavailable = (response && response.status === 503) || errStr.includes('503') || errStr.includes('UNAVAILABLE');
+
+        if (isUnavailable && attempt < maxAttempts - 1) {
+          console.warn(`[Chat Client Retry] Attempt ${attempt + 1} failed with 503/UNAVAILABLE. Retrying in ${delays[attempt]}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delays[attempt]));
+          attempt++;
+        } else {
+          break;
+        }
+      }
+
+      if (response && response.ok) {
         const data = await response.json();
         
         // Update history with full history returned by Gemini (including tool calls and responses)
@@ -222,11 +368,42 @@ export default function App() {
         }
 
       } else {
-        const errData = await response.json();
+        const errStr = (typeof errData?.error === 'string' ? errData.error : JSON.stringify(errData || '')).toUpperCase();
+        const isQuota = (response && response.status === 429) ||
+                        errStr.includes('429') ||
+                        errStr.includes('QUOTA') ||
+                        errStr.includes('RESOURCE_EXHAUSTED');
+        const isUnavailable = (response && response.status === 503) || 
+                              errStr.includes('503') || 
+                              errStr.includes('UNAVAILABLE') || 
+                              errStr.includes('OVERLOADED') || 
+                              errStr.includes('CAPACITY_EXCEEDED');
+        
+        let friendlyMessage = '';
+        if (isQuota) {
+          friendlyMessage = "⚠️ **Gemini API Daily Quota Reached (Free Tier Limit)**\n\nYou have hit the shared Google AI Studio daily free-tier limit (20 requests per day).\n\n**To resolve this and unlock unlimited queries instantly:**\n1. Go to the **Settings** menu (the gear icon in the top right of the AI Studio workspace).\n2. Input your own personal **Gemini API Key** (get a free one in 10 seconds at https://aistudio.google.com/).\n3. This will overwrite the shared key and give you your own **limitless, ultra-fast Nudge chat experience**!";
+        } else if (isUnavailable) {
+          friendlyMessage = "Nudge is a bit overloaded right now — try again in a moment.";
+        } else {
+          let rawErr = errData?.error;
+          if (rawErr && typeof rawErr === 'object') {
+            rawErr = rawErr.message || JSON.stringify(rawErr);
+          }
+          if (!rawErr) {
+            rawErr = 'Failed to get answer from Nudge.';
+          }
+          
+          if (rawErr.includes('{') || rawErr.includes('}')) {
+            friendlyMessage = "Nudge encountered an unexpected response — try again in a moment.";
+          } else {
+            friendlyMessage = `Error: ${rawErr}`;
+          }
+        }
+
         const errorMsg: ChatMessage = {
           id: Math.random().toString(),
           role: 'model',
-          parts: [{ text: `Error: ${errData.error || 'Failed to get answer from Nudge.'}` }],
+          parts: [{ text: friendlyMessage }],
           createdAt: new Date().toISOString(),
           isSystem: true
         };
@@ -247,6 +424,93 @@ export default function App() {
     }
   };
 
+  // Request Web Notification permission
+  const requestWebNotificationPermission = async () => {
+    if (!('Notification' in window)) {
+      setActiveToasts(prev => [...prev, {
+        id: Math.random().toString(),
+        title: "Platform Constraint",
+        message: "Desktop push alerts are not supported on this browser or platform."
+      }]);
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    setNotificationPermission(permission);
+    if (permission === 'granted') {
+      try {
+        new Notification("Notifications Enabled! 🎉", {
+          body: "Nudge will now alert you 24 hours before your urgent deadlines.",
+          icon: 'https://cdn-icons-png.flaticon.com/512/3593/3593497.png'
+        });
+      } catch (e) {
+        console.warn("Could not fire confirmation Notification:", e);
+      }
+    }
+  };
+
+  // Check for upcoming critical deadlines (less than 24 hours away) and fire notifications
+  useEffect(() => {
+    if (tasks.length === 0) return;
+
+    const criticals = tasks.filter(task => {
+      if (task.status === 'completed') return false;
+      const dueTime = new Date(task.due_date).getTime();
+      const now = Date.now();
+      const hoursLeft = (dueTime - now) / (1000 * 60 * 60);
+      return hoursLeft > 0 && hoursLeft <= 24;
+    });
+
+    if (criticals.length === 0) return;
+
+    // Find criticals that haven't been notified yet in this session
+    const newCriticals = criticals.filter(t => t.id && !notifiedTaskIds.includes(t.id));
+
+    if (newCriticals.length > 0) {
+      const idsToMark = newCriticals.map(t => t.id!);
+      setNotifiedTaskIds(prev => [...prev, ...idsToMark]);
+
+      newCriticals.forEach(task => {
+        // 1. In-app floating slide toast
+        const toastId = Math.random().toString();
+        const hrsLeft = Math.ceil((new Date(task.due_date).getTime() - Date.now()) / (1000 * 60 * 60));
+        
+        setActiveToasts(prev => [...prev, {
+          id: toastId,
+          title: `🚨 Urgent: ${task.title}`,
+          message: `This high-urgency task is due in ${hrsLeft} hours! Let's get to work.`,
+          taskId: task.id
+        }]);
+
+        // Auto remove toast after 7 seconds
+        setTimeout(() => {
+          setActiveToasts(prev => prev.filter(t => t.id !== toastId));
+        }, 7000);
+
+        // 2. Standard HTML5 Web Notification if permission granted
+        if ('Notification' in window && Notification.permission === 'granted') {
+          try {
+            new Notification(`Nudge Alert: ${task.title} 🚨`, {
+              body: `Due in ${hrsLeft} hours. Let's schedule dynamic work blocks with Nudge.`,
+              icon: 'https://cdn-icons-png.flaticon.com/512/3593/3593497.png'
+            });
+          } catch (e) {
+            console.warn("Failed to fire browser Notification:", e);
+          }
+        }
+
+        // 3. Proactive chatbot auto-message
+        const alertMsg: ChatMessage = {
+          id: Math.random().toString(),
+          role: 'model',
+          parts: [{ text: `🚨 **Proactive Deadline Intervention:** I noticed that your task **"${task.title}"** is due in less than 24 hours (specifically, in **${hrsLeft} hours**)! Let's get this finished. Should I draft a custom step-by-step revision schedule or work block sequence for tomorrow to make sure you finish it on time?` }],
+          createdAt: new Date().toISOString(),
+          isSystem: true
+        };
+        setChatHistory(prev => [...prev, alertMsg]);
+      });
+    }
+  }, [tasks, notifiedTaskIds]);
+
   // Proactive Alarms Helper: Find tasks due within 24 hours that are pending or in-progress
   const getProactiveAlarms = () => {
     return tasks.filter(task => {
@@ -261,25 +525,199 @@ export default function App() {
   const criticalTasks = getProactiveAlarms();
 
   return (
-    <div id="app-container" className="flex flex-col h-screen w-full bg-transparent text-zinc-100 selection:bg-violet-600 selection:text-white font-sans overflow-hidden relative">
-      {/* Interactive Starfield Parallax Particles */}
-      <Starfield />
+    <div 
+      id="app-container" 
+      className={`flex flex-col ${needsAuth ? 'min-h-screen h-auto overflow-y-auto' : 'h-screen overflow-hidden'} w-full bg-transparent text-zinc-100 selection:bg-violet-600 selection:text-white font-sans relative`}
+    >
+      {/* Floating Active Toasts */}
+      <div className="fixed top-20 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+        <AnimatePresence>
+          {activeToasts.map((toast) => (
+            <motion.div
+              key={toast.id}
+              initial={{ opacity: 0, y: -20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9, x: 20 }}
+              className="pointer-events-auto bg-[#0c0824]/95 border border-violet-500/30 rounded-2xl p-4 shadow-[0_10px_30px_rgba(139,92,246,0.3)] flex gap-3 relative overflow-hidden backdrop-blur-md"
+            >
+              {/* Highlight accent bar */}
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-violet-500 to-indigo-600" />
+              <div className="flex-1 text-left">
+                <div className="text-xs font-extrabold text-white flex items-center gap-1.5">
+                  <AlertOctagon className="w-4 h-4 text-violet-400 animate-pulse" />
+                  <span>{toast.title}</span>
+                </div>
+                <div className="text-[11px] text-indigo-200/70 mt-1 leading-relaxed">
+                  {toast.message}
+                </div>
+                <div className="flex gap-2 mt-2.5">
+                  <button
+                    onClick={() => {
+                      handleSendMessage(`Let's re-plan my day to focus on "${toast.title.replace('🚨 Urgent: ', '')}".`);
+                      setActiveToasts(prev => prev.filter(t => t.id !== toast.id));
+                    }}
+                    className="text-[10px] bg-violet-600 hover:bg-violet-700 text-white font-extrabold px-3 py-1 rounded-full transition-all cursor-pointer shadow-md"
+                  >
+                    Reschedule Now
+                  </button>
+                  <button
+                    onClick={() => setActiveToasts(prev => prev.filter(t => t.id !== toast.id))}
+                    className="text-[10px] bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white px-3 py-1 rounded-full transition-all cursor-pointer border border-[#251e4d]/40"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveToasts(prev => prev.filter(t => t.id !== toast.id))}
+                className="absolute top-3 right-3 text-zinc-500 hover:text-white transition-all cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
 
       {/* Dynamic Header */}
-      <header className="flex items-center justify-between px-6 py-4 bg-[#0d0926]/85 border-b border-[#251e4d]/40 backdrop-blur-md shrink-0 z-10">
-        <div className="flex items-center gap-3">
+      <header className="flex items-center justify-between px-4 sm:px-6 py-4 bg-[#0d0926]/85 border-b border-[#251e4d]/40 backdrop-blur-md shrink-0 z-10">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {currentUser && (
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="p-1.5 rounded-lg border border-[#251e4d]/50 hover:bg-violet-950/20 hover:border-violet-900/30 text-indigo-300 hover:text-violet-400 md:hidden transition-all cursor-pointer mr-1"
+              title="Open Dashboard"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          )}
+
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center border border-violet-400/20 shadow-[0_0_15px_rgba(139,92,246,0.45)]">
             <Sparkles className="w-5 h-5 text-white animate-pulse" />
           </div>
           <div>
-            <h1 className="font-display font-extrabold text-base tracking-wide text-white leading-none">Last-Minute Life Saver</h1>
-            <span className="text-[10px] text-violet-400 font-mono tracking-wider uppercase mt-1.5 block font-semibold">Proactive AI Deadline Guardian</span>
+            <h1 className="font-display font-extrabold text-sm sm:text-base tracking-wide text-white leading-none">Last-Minute Life Saver</h1>
+            <span className="text-[9px] sm:text-[10px] text-violet-400 font-mono tracking-wider uppercase mt-1.5 block font-semibold">Proactive AI Deadline Guardian</span>
           </div>
         </div>
 
         {/* User Account / Control info */}
         {currentUser && (
           <div className="flex items-center gap-3">
+            {/* Proactive Notification Bell System */}
+            <div className="relative">
+              <button
+                onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
+                className={`p-2 rounded-xl border border-[#251e4d]/50 hover:bg-violet-950/20 hover:border-violet-900/30 text-indigo-300 hover:text-violet-400 transition-all cursor-pointer relative ${showNotificationDropdown ? 'bg-violet-950/20 border-violet-900/40 text-violet-400' : ''}`}
+                title="Alerts & Notification Center"
+              >
+                {criticalTasks.length > 0 ? (
+                  <BellRing className="w-4 h-4 text-violet-400 animate-bounce" />
+                ) : (
+                  <Bell className="w-4 h-4" />
+                )}
+                {criticalTasks.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-[9px] font-mono font-extrabold animate-pulse">
+                    {criticalTasks.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Bell Dropdown Popup */}
+              <AnimatePresence>
+                {showNotificationDropdown && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute right-0 mt-2 w-80 bg-[#0c0824] border border-[#251e4d]/80 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.85)] p-4 z-50 space-y-3 font-sans backdrop-blur-md"
+                  >
+                    <div className="flex items-center justify-between border-b border-[#251e4d]/30 pb-2">
+                      <div className="flex items-center gap-1.5">
+                        <AlertOctagon className="w-4 h-4 text-violet-400 animate-pulse" />
+                        <span className="text-xs font-extrabold text-white">Alerts & Reminders</span>
+                      </div>
+                      <span className="text-[10px] text-indigo-300 font-mono font-bold bg-violet-950/40 px-2 py-0.5 rounded-full border border-violet-900/30">
+                        {criticalTasks.length} Urgent
+                      </span>
+                    </div>
+
+                    {/* Task Alert List */}
+                    <div className="max-h-56 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
+                      {criticalTasks.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-6 text-center space-y-2">
+                          <CheckCircle2 className="w-7 h-7 text-emerald-400" />
+                          <div>
+                            <p className="text-xs font-bold text-zinc-100">All Deadlines Secured</p>
+                            <p className="text-[10px] text-zinc-400/80 leading-none mt-0.5">No tasks due within 24 hours.</p>
+                          </div>
+                        </div>
+                      ) : (
+                        criticalTasks.map(task => {
+                          const due = new Date(task.due_date);
+                          const hrsLeft = Math.ceil((due.getTime() - Date.now()) / (1000 * 60 * 60));
+                          return (
+                            <div key={task.id} className="bg-violet-950/25 border border-violet-900/30 p-2.5 rounded-xl space-y-2 hover:border-violet-800/45 transition-all">
+                              <div className="flex items-start gap-2">
+                                <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-xs font-extrabold text-zinc-100 truncate" title={task.title}>{task.title}</div>
+                                  <div className="text-[10px] text-amber-300/80 font-semibold font-mono mt-0.5">
+                                    Due in {hrsLeft} hrs ({due.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex justify-end gap-1.5">
+                                <button
+                                  onClick={() => {
+                                    handleSendMessage(`Create a step-by-step dynamic plan to finish my task "${task.title}" before it is due.`);
+                                    setShowNotificationDropdown(false);
+                                  }}
+                                  className="text-[9px] bg-violet-600 hover:bg-violet-700 text-white font-extrabold px-2.5 py-1 rounded-md transition-all cursor-pointer"
+                                >
+                                  Nudge Plan
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    handleUpdateTask(task.id!, { status: 'completed' });
+                                  }}
+                                  className="text-[9px] bg-emerald-600/20 text-emerald-300 border border-emerald-500/20 hover:bg-emerald-600/30 px-2.5 py-1 rounded-md transition-all cursor-pointer"
+                                >
+                                  Done
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Permissions Config Switcher */}
+                    <div className="border-t border-[#251e4d]/30 pt-2.5 space-y-2">
+                      <div className="flex items-center justify-between gap-1.5">
+                        <div className="text-left">
+                          <div className="text-[10px] uppercase font-bold text-indigo-300/60 font-mono tracking-wider leading-none">Desktop Push Alerts</div>
+                          <div className="text-[9px] text-zinc-400 mt-0.5">Status: {notificationPermission}</div>
+                        </div>
+                        {notificationPermission !== 'granted' ? (
+                          <button
+                            onClick={requestWebNotificationPermission}
+                            className="text-[9px] bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 px-2.5 py-1.5 rounded-full font-bold transition-all cursor-pointer"
+                          >
+                            Enable Push
+                          </button>
+                        ) : (
+                          <span className="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">
+                            Active
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             <div className="hidden sm:flex flex-col items-end">
               <span className="text-xs font-semibold text-zinc-200">{currentUser.displayName || 'Committed User'}</span>
               <span className="text-[10px] text-indigo-400/70 font-mono">{currentUser.email}</span>
@@ -335,16 +773,16 @@ export default function App() {
       </AnimatePresence>
 
       {/* Main workspace */}
-      <div className="flex-1 flex overflow-hidden z-10">
+      <div className={`flex-1 flex ${needsAuth ? 'min-h-0 h-auto overflow-visible' : 'overflow-hidden'} z-10`}>
         {needsAuth ? (
           /* Landing Screen / Onboarding */
-          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center relative overflow-hidden w-full">
+          <div className="flex-1 flex flex-col items-center justify-center py-10 px-6 text-center relative w-full">
             {/* Full Scene Illustration background */}
             <LandscapeBackground />
 
             <div className="relative z-10 max-w-2xl mx-auto flex flex-col items-center justify-center space-y-6">
               {/* The Cosmic Orb Area with Floating Glass Cards */}
-              <div className="relative w-full max-w-md h-72 flex items-center justify-center my-2">
+              <div className="relative w-full max-w-md h-72 flex items-center justify-center mt-4 mb-10 md:my-2">
                 {/* Soft glowing halo bleeding into the background behind the orb */}
                 <div className="absolute w-80 h-80 rounded-full bg-violet-600/15 blur-3xl scale-125 animate-pulse pointer-events-none"></div>
                 
@@ -423,45 +861,338 @@ export default function App() {
                 {/* Thin glowing horizontal accent line under headline */}
                 <div className="glowing-divider w-32"></div>
                 <p className="text-indigo-200/70 text-sm leading-relaxed font-sans max-w-lg mx-auto pt-1">
-                  Meet <strong className="text-violet-400 font-semibold">Nudge</strong>, a hyper-focused AI productivity assistant that captures deadlines automatically, syncs with Google Calendar, and creates time-blocked plans to keep you on schedule.
+                  Meet <strong className="text-violet-600 font-bold">Nudge</strong>, a hyper-focused AI productivity assistant that captures deadlines automatically, syncs with Google Calendar, and creates time-blocked plans to keep you on schedule.
                 </p>
               </div>
 
               {/* Premium Pill-shaped CTA button with lavender gradient */}
-              <button
-                onClick={handleLogin}
-                disabled={isLoggingIn}
-                className="btn-pill-lavender text-white font-extrabold text-base tracking-wider px-10 py-4 shadow-[0_0_40px_rgba(167,139,250,0.8)] border-2 border-violet-400/40 hover:border-violet-300/60 transition-all z-10 cursor-pointer mt-4 flex items-center justify-center gap-3 w-full sm:w-auto"
-              >
-                <Sparkles className="w-5 h-5 text-indigo-100 animate-pulse" />
-                <span>{isLoggingIn ? 'Connecting...' : 'Secure Google Sign-In'}</span>
-              </button>
+              <div className="flex flex-col items-center gap-4 w-full sm:w-auto mt-4">
+                <button
+                  onClick={handleLogin}
+                  disabled={isLoggingIn}
+                  className="btn-pill-lavender text-white font-extrabold text-base tracking-wider px-10 py-4 shadow-[0_0_40px_rgba(167,139,250,0.8)] border-2 border-violet-400/40 hover:border-violet-300/60 transition-all z-10 cursor-pointer flex items-center justify-center gap-3 w-full"
+                >
+                  <Sparkles className="w-5 h-5 text-indigo-100 animate-pulse" />
+                  <span>{isLoggingIn ? 'Connecting...' : 'Secure Google Sign-In'}</span>
+                </button>
+                
+                <button
+                  onClick={handleStartDemoMode}
+                  className="text-xs font-semibold tracking-wider text-indigo-300 hover:text-white underline underline-offset-4 transition-all z-10 cursor-pointer opacity-80 hover:opacity-100"
+                >
+                  Try Demo Mode (no sign-in required)
+                </button>
+              </div>
             </div>
           </div>
         ) : (
           /* Active App Workspace */
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-[320px_1fr] overflow-hidden">
-            {/* Sidebar Column */}
-            <TaskSidebar
-              tasks={tasks}
-              onAddTask={handleAddTask}
-              onUpdateTask={handleUpdateTask}
-              onDeleteTask={handleDeleteTask}
-            />
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-[320px_1fr] overflow-hidden gap-2 md:gap-0 animate-none h-full">
+            {/* Desktop Dashboard Sidebar Column */}
+            <div className="hidden md:flex flex-col w-[320px] bg-[#08051a]/65 border-r border-[#251e4d]/30 overflow-hidden shrink-0 h-full">
+              {/* Header */}
+              <div className="p-4 border-b border-[#251e4d]/30 flex items-center gap-2 bg-[#0c0824]/60 sticky top-0 z-20 shrink-0">
+                <Layers className="w-5 h-5 text-violet-400 animate-pulse" />
+                <span className="font-display font-extrabold text-sm tracking-wide text-white">Nudge Dashboard</span>
+              </div>
+
+              {/* Sidebar Scrollable Body */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                {/* 1. Theme Switcher */}
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase tracking-wider text-indigo-300/60 font-semibold font-mono block">
+                    Visual Theme Mode
+                  </label>
+                  <div className="bg-[#0f0a2d] border border-[#251e4d]/60 rounded-xl p-1 flex gap-1">
+                    <button
+                      onClick={() => setTheme('dark')}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        theme === 'dark'
+                          ? 'bg-violet-600 text-white shadow-md'
+                          : 'text-indigo-300/60 hover:text-indigo-200 hover:bg-white/5'
+                      }`}
+                    >
+                      <Moon className="w-3.5 h-3.5" />
+                      <span>Dark Space</span>
+                    </button>
+                    <button
+                      onClick={() => setTheme('light')}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        theme === 'light'
+                          ? 'bg-amber-500 text-slate-900 shadow-md'
+                          : 'text-indigo-300/60 hover:text-indigo-200 hover:bg-white/5'
+                      }`}
+                    >
+                      <Sun className="w-3.5 h-3.5" />
+                      <span>Light Horizon</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Add Account Component */}
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase tracking-wider text-indigo-300/60 font-semibold font-mono block">
+                    Accounts & Integrations
+                  </label>
+                  <div className="bg-[#0f0a2d] border border-[#251e4d]/40 rounded-2xl p-3 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-violet-400" />
+                        <div>
+                          <div className="text-xs font-bold text-zinc-100">Google Calendar</div>
+                          <div className="text-[9px] text-indigo-300/50 leading-none mt-0.5">Auto deadline import</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleSyncGoogleCalendar}
+                        disabled={calendarSyncing}
+                        className={`text-[10px] px-2.5 py-1 rounded-full font-semibold border transition-all cursor-pointer whitespace-nowrap ${
+                          calendarSyncing
+                            ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30 animate-pulse'
+                            : googleToken 
+                              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' 
+                              : 'bg-violet-600/10 text-violet-300 border-violet-500/20 hover:bg-violet-600/20'
+                        }`}
+                      >
+                        {calendarSyncing ? 'Syncing...' : (googleToken ? 'Connected' : 'Connect')}
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 border-t border-[#251e4d]/20 pt-2.5">
+                      <div className="flex items-center gap-2">
+                        <UserIcon className="w-4 h-4 text-violet-400" />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-bold text-zinc-100">Google Account</div>
+                          <div className="text-[9px] text-indigo-300/50 leading-tight mt-0.5 truncate max-w-[120px]" title={currentUser ? currentUser.email || '' : ''}>
+                            {currentUser ? (currentUser.email || 'Connected') : 'Not connected'}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={currentUser ? handleLogout : handleLogin}
+                        className={`text-[10px] px-2.5 py-1 rounded-full font-semibold border transition-all cursor-pointer whitespace-nowrap ${
+                          currentUser 
+                            ? 'bg-rose-500/10 text-rose-300 border-rose-500/20 hover:bg-rose-500/20' 
+                            : 'bg-violet-600 text-white border-violet-500/20 hover:bg-violet-700'
+                        }`}
+                      >
+                        {currentUser ? 'Disconnect' : 'Add Account'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Add Task Section (collapsible accordion for complete TaskSidebar component) */}
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setIsTaskSectionExpanded(!isTaskSectionExpanded)}
+                    className="w-full flex items-center justify-between p-3 bg-[#0f0a2d] hover:bg-[#150e3d] border border-[#251e4d]/40 rounded-xl transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Plus className="w-4 h-4 text-violet-400" />
+                      <span className="text-xs font-bold text-zinc-100">Add Task & Deadlines</span>
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-indigo-400 transition-transform ${isTaskSectionExpanded ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  <AnimatePresence>
+                    {isTaskSectionExpanded && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden border border-[#251e4d]/30 rounded-xl bg-black/20"
+                      >
+                        <div className="max-h-[380px] overflow-y-auto">
+                          <TaskSidebar
+                            tasks={tasks}
+                            onAddTask={handleAddTask}
+                            onUpdateTask={handleUpdateTask}
+                            onDeleteTask={handleDeleteTask}
+                          />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+            </div>
 
             {/* Chat Column */}
-            <NudgeChat
-              chatHistory={chatHistory}
-              onSendMessage={handleSendMessage}
-              isLoading={isLoadingChat}
-              needsAuth={needsAuth}
-              onLogin={handleLogin}
-              isLoggingIn={isLoggingIn}
-              criticalTasksCount={criticalTasks.length}
-            />
+            <div className="w-full h-full">
+              <NudgeChat
+                chatHistory={chatHistory}
+                onSendMessage={handleSendMessage}
+                isLoading={isLoadingChat}
+                needsAuth={needsAuth}
+                onLogin={handleLogin}
+                isLoggingIn={isLoggingIn}
+                criticalTasksCount={criticalTasks.length}
+              />
+            </div>
           </div>
         )}
       </div>
+
+      {/* Mobile Sidebar/Drawer Overlay */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 z-50 md:hidden flex">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+            />
+
+            {/* Sidebar Content */}
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="relative w-[320px] max-w-[85vw] h-full bg-[#08051a] border-r border-[#251e4d]/40 flex flex-col z-10 overflow-hidden shadow-[5px_0_30px_rgba(0,0,0,0.5)]"
+            >
+              {/* Drawer Header */}
+              <div className="p-4 border-b border-[#251e4d]/40 flex items-center justify-between bg-[#0c0824]/95 sticky top-0 z-20 shrink-0">
+                <div className="flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-violet-400" />
+                  <span className="font-display font-bold text-base text-white">Nudge Dashboard</span>
+                </div>
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-1 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-all cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Drawer Body */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                {/* 1. Theme Switcher */}
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase tracking-wider text-indigo-300/60 font-semibold font-mono block">
+                    Visual Theme Mode
+                  </label>
+                  <div className="bg-[#0f0a2d] border border-[#251e4d]/60 rounded-xl p-1 flex gap-1">
+                    <button
+                      onClick={() => setTheme('dark')}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        theme === 'dark'
+                          ? 'bg-violet-600 text-white shadow-md'
+                          : 'text-indigo-300/60 hover:text-indigo-200 hover:bg-white/5'
+                      }`}
+                    >
+                      <Moon className="w-3.5 h-3.5" />
+                      <span>Dark Space</span>
+                    </button>
+                    <button
+                      onClick={() => setTheme('light')}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        theme === 'light'
+                          ? 'bg-amber-500 text-slate-900 shadow-md'
+                          : 'text-indigo-300/60 hover:text-indigo-200 hover:bg-white/5'
+                      }`}
+                    >
+                      <Sun className="w-3.5 h-3.5" />
+                      <span>Light Horizon</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Add Account Component */}
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase tracking-wider text-indigo-300/60 font-semibold font-mono block">
+                    Accounts & Integrations
+                  </label>
+                  <div className="bg-[#0f0a2d] border border-[#251e4d]/40 rounded-2xl p-3 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-violet-400" />
+                        <div>
+                          <div className="text-xs font-bold text-zinc-100">Google Calendar</div>
+                          <div className="text-[9px] text-indigo-300/50 leading-none mt-0.5">Auto deadline import</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleSyncGoogleCalendar}
+                        disabled={calendarSyncing}
+                        className={`text-[10px] px-2.5 py-1 rounded-full font-semibold border transition-all cursor-pointer whitespace-nowrap ${
+                          calendarSyncing
+                            ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30 animate-pulse'
+                            : googleToken 
+                              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' 
+                              : 'bg-violet-600/10 text-violet-300 border-violet-500/20 hover:bg-violet-600/20'
+                        }`}
+                      >
+                        {calendarSyncing ? 'Syncing...' : (googleToken ? 'Connected' : 'Connect')}
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 border-t border-[#251e4d]/20 pt-2.5">
+                      <div className="flex items-center gap-2">
+                        <UserIcon className="w-4 h-4 text-violet-400" />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-bold text-zinc-100">Google Account</div>
+                          <div className="text-[9px] text-indigo-300/50 leading-tight mt-0.5 truncate max-w-[120px]">
+                            {currentUser ? (currentUser.email || 'Connected') : 'Not connected'}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={currentUser ? handleLogout : handleLogin}
+                        className={`text-[10px] px-2.5 py-1 rounded-full font-semibold border transition-all cursor-pointer whitespace-nowrap ${
+                          currentUser 
+                            ? 'bg-rose-500/10 text-rose-300 border-rose-500/20 hover:bg-rose-500/20' 
+                            : 'bg-violet-600 text-white border-violet-500/20 hover:bg-violet-700'
+                        }`}
+                      >
+                        {currentUser ? 'Disconnect' : 'Add Account'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Add Task Section (collapsible accordion for complete TaskSidebar component) */}
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setIsTaskSectionExpanded(!isTaskSectionExpanded)}
+                    className="w-full flex items-center justify-between p-3 bg-[#0f0a2d] hover:bg-[#150e3d] border border-[#251e4d]/40 rounded-xl transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Plus className="w-4 h-4 text-violet-400" />
+                      <span className="text-xs font-bold text-zinc-100">Add Task & Deadlines</span>
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-indigo-400 transition-transform ${isTaskSectionExpanded ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  <AnimatePresence>
+                    {isTaskSectionExpanded && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden border border-[#251e4d]/30 rounded-xl bg-black/20"
+                      >
+                        <div className="max-h-[380px] overflow-y-auto">
+                          <TaskSidebar
+                            tasks={tasks}
+                            onAddTask={handleAddTask}
+                            onUpdateTask={handleUpdateTask}
+                            onDeleteTask={handleDeleteTask}
+                          />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

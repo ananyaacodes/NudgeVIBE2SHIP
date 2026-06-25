@@ -17,6 +17,8 @@ export interface ChatMessage {
   createdAt: string;
   // Metadata for display
   isSystem?: boolean;
+  audioUrl?: string; // Base64 or Blob URL of voice message
+  duration?: string; // Voice recording duration
 }
 
 export interface CalendarEvent {

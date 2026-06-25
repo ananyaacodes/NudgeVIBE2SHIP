@@ -6,6 +6,150 @@
     <title>My Google AI Studio App</title>
   </head>
   <body>
+    <canvas id="starfield" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; will-change: transform;"></canvas>
+    <script>
+      (function() {
+        const canvas = document.getElementById('starfield');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        let width = (canvas.width = window.innerWidth);
+        let height = (canvas.height = window.innerHeight);
+
+        const ambientStars = [];
+        const particles = [];
+
+        // Initialize 100 subtle ambient stars
+        for (let i = 0; i < 100; i++) {
+          ambientStars.push({
+            x: Math.random() * width,
+            y: Math.random() * height,
+            size: Math.random() * 1.5 + 0.5,
+            vx: (Math.random() - 0.5) * 0.15,
+            vy: (Math.random() - 0.5) * 0.15,
+            opacity: Math.random() * 0.6 + 0.2,
+          });
+        }
+
+        // Track last pointer position for velocity
+        let lastX = 0;
+        let lastY = 0;
+        let lastTime = 0;
+        let eventCount = 0;
+
+        function handlePointerMove(clientX, clientY) {
+          eventCount++;
+          const now = performance.now();
+          if (lastTime > 0) {
+            const dt = now - lastTime;
+            if (dt > 0) {
+              const vx = (clientX - lastX) / dt;
+              const vy = (clientY - lastY) / dt;
+              const speed = Math.sqrt(vx * vx + vy * vy);
+              
+              // Only spawn particles every 4 events to prevent performance lag on mobile
+              if (speed > 0.05 && eventCount % 4 === 0) {
+                const count = Math.min(2, Math.max(1, Math.floor(speed * 2)));
+                for (let i = 0; i < count; i++) {
+                  const color = Math.random() > 0.5 ? '#ffffff' : '#a78bfa';
+                  particles.push({
+                    x: clientX,
+                    y: clientY,
+                    vx: vx * (8 + Math.random() * 4) + (Math.random() - 0.5) * 1.0,
+                    vy: vy * (8 + Math.random() * 4) + (Math.random() - 0.5) * 1.0,
+                    color: color,
+                    size: Math.random() * 2.0 + 1.0,
+                    life: 1200, // slightly shorter duration for better perf
+                    maxLife: 1200,
+                  });
+                }
+              }
+            }
+          }
+          lastX = clientX;
+          lastY = clientY;
+          lastTime = now;
+        }
+
+        window.addEventListener('mousemove', (e) => {
+          handlePointerMove(e.clientX, e.clientY);
+        });
+
+        window.addEventListener('touchmove', (e) => {
+          if (e.touches.length > 0) {
+            handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+          }
+        }, { passive: true });
+
+        window.addEventListener('resize', () => {
+          width = canvas.width = window.innerWidth;
+          height = canvas.height = window.innerHeight;
+        });
+
+        let lastFrameTime = performance.now();
+        function animate() {
+          const now = performance.now();
+          const deltaTime = Math.min(50, now - lastFrameTime); // Cap delta time to prevent giant jumps
+          lastFrameTime = now;
+
+          ctx.clearRect(0, 0, width, height);
+
+          // 1. Draw drifting ambient stars
+          ctx.fillStyle = 'rgba(199, 210, 254, 0.8)';
+          for (let i = 0; i < ambientStars.length; i++) {
+            const s = ambientStars[i];
+            s.x += s.vx * (deltaTime / 16.666);
+            s.y += s.vy * (deltaTime / 16.666);
+
+            if (s.x < 0) s.x = width;
+            if (s.x > width) s.x = 0;
+            if (s.y < 0) s.y = height;
+            if (s.y > height) s.y = 0;
+
+            ctx.globalAlpha = s.opacity;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // 2. Draw active star particles with fade and friction
+          for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.life -= deltaTime;
+            if (p.life <= 0) {
+              particles.splice(i, 1);
+              continue;
+            }
+
+            p.vx *= Math.pow(0.95, deltaTime / 16.666);
+            p.vy *= Math.pow(0.95, deltaTime / 16.666);
+
+            p.x += p.vx * (deltaTime / 16.666);
+            p.y += p.vy * (deltaTime / 16.666);
+
+            const alpha = p.life / p.maxLife;
+
+            // Soft outer glow
+            ctx.globalAlpha = alpha * 0.35;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * 2.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Bright star core
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * 0.9, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          requestAnimationFrame(animate);
+        }
+        requestAnimationFrame(animate);
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

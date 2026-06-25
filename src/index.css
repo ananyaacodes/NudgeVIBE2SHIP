@@ -344,3 +344,218 @@
   letter-spacing: 0.25px;
 }
 
+
+/* LIGHT THEME GORGEOUS OVERRIDES */
+body.light-theme {
+  background: radial-gradient(circle at center, #fbfaff 0%, #f3f4f6 60%, #e2e8f0 100%) !important;
+  color: #1e1b4b !important;
+}
+
+body.light-theme ::-webkit-scrollbar-track {
+  background: rgba(226, 232, 240, 0.4);
+}
+
+body.light-theme ::-webkit-scrollbar-thumb {
+  background: rgba(124, 58, 237, 0.2);
+}
+
+body.light-theme ::-webkit-scrollbar-thumb:hover {
+  background: rgba(124, 58, 237, 0.4);
+}
+
+.light-theme #app-container {
+  color: #0f172a !important;
+}
+
+.light-theme header {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(99, 102, 241, 0.15) !important;
+  box-shadow: 0 4px 20px -2px rgba(139, 92, 246, 0.05);
+}
+
+.light-theme header h1 {
+  color: #1e1b4b !important;
+}
+
+.light-theme header span {
+  color: #6366f1 !important;
+}
+
+.light-theme header .text-zinc-200 {
+  color: #334155 !important;
+}
+
+.light-theme header .text-indigo-300 {
+  color: #4f46e5 !important;
+}
+
+.light-theme header .text-indigo-400\/70 {
+  color: #6366f1 !important;
+}
+
+.light-theme #task-sidebar,
+.light-theme [id="task-sidebar"] {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  border-color: rgba(99, 102, 241, 0.15) !important;
+  color: #0f172a !important;
+}
+
+.light-theme #task-sidebar h2,
+.light-theme #task-sidebar h3,
+.light-theme #task-sidebar .text-zinc-200 {
+  color: #1e1b4b !important;
+}
+
+.light-theme #nudge-chat,
+.light-theme [id="nudge-chat"] {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  border-color: rgba(99, 102, 241, 0.12) !important;
+  color: #0f172a !important;
+}
+
+.light-theme #nudge-chat h1,
+.light-theme #nudge-chat h2,
+.light-theme #nudge-chat h3 {
+  color: #0f172a !important;
+}
+
+.light-theme #nudge-chat p,
+.light-theme #nudge-chat span:not(.font-mono) {
+  color: #334155 !important;
+}
+
+.light-theme .text-white {
+  color: #0f172a !important;
+}
+
+.light-theme .text-zinc-100 {
+  color: #1e293b !important;
+}
+
+.light-theme .text-zinc-200 {
+  color: #334155 !important;
+}
+
+.light-theme .text-zinc-300 {
+  color: #475569 !important;
+}
+
+.light-theme .text-indigo-100 {
+  color: #1e1b4b !important;
+}
+
+.light-theme .text-indigo-200 {
+  color: #312e81 !important;
+}
+
+.light-theme .text-indigo-300 {
+  color: #4338ca !important;
+}
+
+.light-theme .text-indigo-200\/70 {
+  color: #4f46e5 !important;
+}
+
+.light-theme .text-indigo-300\/50,
+.light-theme .text-indigo-300\/60 {
+  color: #4f46e5 !important;
+}
+
+.light-theme .glass-card-lavender {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(139, 92, 246, 0.15) !important;
+  color: #1e1b4b !important;
+  box-shadow: 0 4px 15px -3px rgba(139, 92, 246, 0.08);
+}
+
+.light-theme .glass-card-lavender:hover {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: rgba(139, 92, 246, 0.25) !important;
+  box-shadow: 0 8px 25px -5px rgba(139, 92, 246, 0.12);
+}
+
+.light-theme input,
+.light-theme select,
+.light-theme textarea {
+  background-color: #ffffff !important;
+  border-color: rgba(99, 102, 241, 0.25) !important;
+  color: #0f172a !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.light-theme input::placeholder,
+.light-theme textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+.light-theme .border-[#251e4d]\/30,
+.light-theme .border-[#251e4d]\/35,
+.light-theme .border-[#251e4d]\/40,
+.light-theme .border-[#251e4d]\/50,
+.light-theme .border-[#251e4d]\/60,
+.light-theme .border-indigo-900\/40 {
+  border-color: rgba(99, 102, 241, 0.15) !important;
+}
+
+.light-theme .bg-[#0d0926]\/85,
+.light-theme .bg-[#060413]\/70,
+.light-theme .bg-[#0c0824]\/90,
+.light-theme .bg-[#0c0926],
+.light-theme .bg-[#08051a]\/60 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.light-theme .bg-[#0c0926] {
+  background-color: #f8fafc !important;
+}
+
+.light-theme .bg-[#0f0a2d] {
+  background-color: #f1f5f9 !important;
+  border-color: rgba(99, 102, 241, 0.1) !important;
+}
+
+/* Fix chat messages background in light theme */
+.light-theme [id="nudge-chat"] .bg-[#16123a]\/60,
+.light-theme [id="nudge-chat"] .bg-zinc-900\/50 {
+  background-color: rgba(241, 245, 249, 0.9) !important;
+  border-color: rgba(99, 102, 241, 0.15) !important;
+  color: #0f172a !important;
+}
+
+.light-theme [id="nudge-chat"] .text-indigo-200\/90 {
+  color: #334155 !important;
+}
+
+.light-theme [id="nudge-chat"] .bg-violet-950\/30 {
+  background-color: rgba(139, 92, 246, 0.08) !important;
+  border-color: rgba(139, 92, 246, 0.15) !important;
+}
+
+.light-theme [id="nudge-chat"] .text-violet-300 {
+  color: #6d28d9 !important;
+}
+
+/* Fix Drawer specifically */
+.light-theme .fixed .bg-[#08051a] {
+  background-color: #ffffff !important;
+  border-color: rgba(99, 102, 241, 0.15) !important;
+}
+
+.light-theme .fixed .bg-[#0c0824]\/95 {
+  background-color: #f8fafc !important;
+  border-color: rgba(99, 102, 241, 0.15) !important;
+}
+
+.light-theme .fixed .text-white {
+  color: #1e1b4b !important;
+}
+
+.light-theme .fixed .text-zinc-100 {
+  color: #0f172a !important;
+}
+
+.light-theme .fixed .bg-[#0f0a2d] {
+  background-color: #f1f5f9 !important;
+}
+
+

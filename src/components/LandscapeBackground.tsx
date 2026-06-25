@@ -2,7 +2,7 @@ import React from 'react';
 
 export const LandscapeBackground: React.FC = () => {
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none select-none z-0">
+    <div className="fixed inset-0 overflow-hidden pointer-events-none select-none z-0">
       {/* 1. LIGHT BEAMS: Soft vertical light beams glowing upward from behind the orb */}
       <div className="absolute inset-0 flex justify-center items-center pointer-events-none z-0 opacity-70">
         {/* Central lavender pillar of light, starting below the orb and shooting up to the top */}

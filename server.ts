@@ -33,7 +33,9 @@ if (fs.existsSync(firebaseConfigPath)) {
 
 // Initialize Firebase
 const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const db = getFirestore(firebaseApp);
+const db = firebaseConfig.firestoreDatabaseId 
+  ? getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId)
+  : getFirestore(firebaseApp);
 
 // Initialize Gemini SDK with User-Agent telemetry header
 const ai = new GoogleGenAI({
@@ -62,6 +64,9 @@ app.get('/api/tasks', async (req, res) => {
     if (!userId) {
       return res.status(401).json({ error: 'Missing x-user-id header' });
     }
+
+    // Make sure demo tasks are seeded
+    await ensureDemoTasksSeeded(userId);
 
     const tasksCol = collection(db, 'tasks');
     const q = query(
@@ -150,6 +155,60 @@ app.delete('/api/tasks/:id', async (req, res) => {
 });
 
 // TOOL IMPLEMENTATIONS FOR GEMINI
+async function ensureDemoTasksSeeded(userId: string) {
+  if (!userId || !userId.startsWith('demo_')) return;
+
+  try {
+    const tasksCol = collection(db, 'tasks');
+    const q = query(
+      tasksCol,
+      where('userId', '==', userId)
+    );
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+      console.log(`[Demo Auto-Seed] Seeding tasks for demo user ${userId}...`);
+      
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(18, 0, 0, 0);
+
+      const inTwoDays = new Date();
+      inTwoDays.setDate(inTwoDays.getDate() + 2);
+      inTwoDays.setHours(12, 0, 0, 0);
+
+      const sampleTasks = [
+        {
+          title: 'Submit report',
+          due_date: tomorrow.toISOString(),
+          priority: 'high',
+          category: 'assignment',
+          status: 'pending',
+          userId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          title: 'Pay electricity bill',
+          due_date: inTwoDays.toISOString(),
+          priority: 'medium',
+          category: 'bill',
+          status: 'pending',
+          userId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      ];
+
+      for (const t of sampleTasks) {
+        await addDoc(tasksCol, t);
+      }
+    }
+  } catch (error) {
+    console.error('Error auto-seeding demo tasks:', error);
+  }
+}
+
 async function addTaskInternal(userId: string, args: any) {
   console.log('[add_task tool] Called with args:', args);
   const { title, due_date, priority, category } = args;
@@ -177,6 +236,9 @@ async function addTaskInternal(userId: string, args: any) {
 async function getPrioritiesInternal(userId: string, args: any) {
   console.log('[get_priorities tool] Called with args:', args);
   const limitCount = args.limit || 5;
+
+  // Make sure demo tasks are seeded
+  await ensureDemoTasksSeeded(userId);
 
   const tasksCol = collection(db, 'tasks');
   const q = query(
@@ -219,7 +281,28 @@ async function suggestScheduleInternal(userId: string, accessToken: string | und
 
   // 2. Query Google Calendar if accessToken is present
   let calendarEvents: any[] = [];
-  if (accessToken) {
+  if (userId && userId.startsWith('demo_')) {
+    calendarEvents = [
+      {
+        id: 'demo-evt-1',
+        summary: 'Team standup',
+        start: `${date}T10:00:00`,
+        end: `${date}T10:30:00`
+      },
+      {
+        id: 'demo-evt-2',
+        summary: 'Dentist appointment',
+        start: `${date}T15:00:00`,
+        end: `${date}T16:00:00`
+      },
+      {
+        id: 'demo-evt-3',
+        summary: 'Lunch with team',
+        start: `${date}T12:00:00`,
+        end: `${date}T13:00:00`
+      }
+    ];
+  } else if (accessToken) {
     try {
       const startOfDay = `${date}T00:00:00Z`;
       const endOfDay = `${date}T23:59:59Z`;
@@ -327,15 +410,17 @@ async function suggestScheduleInternal(userId: string, accessToken: string | und
 }
 
 // AI Companion: Nudge Exact Prompt and Function declarations
-const Nudge_systemInstruction = `You are Nudge, a proactive AI productivity companion. Your job is to help the user actually finish tasks before deadlines, not just remind them.
+const Nudge_systemInstruction = `You are Nudge, an assertive, hyper-focused AI Productivity Guardian. Your job is to rescue users from procrastination and missed deadlines.
 
-Core behaviors:
-- When the user mentions a task, deadline, assignment, bill, interview, or commitment, capture it immediately by calling add_task. Don't ask permission first — capture it, then confirm in one short sentence.
-- When the user opens a session or asks what to focus on, call get_priorities to see their current task list ranked by urgency before responding.
-- When the user has multiple competing deadlines, call suggest_schedule to produce a concrete time-blocked plan rather than giving vague advice like "just prioritize."
-- If a deadline is less than 24 hours away and the task isn't marked in-progress, proactively flag it and offer to re-plan the user's day — don't wait to be asked.
-- Be direct and action-oriented. After logging or discussing a task, always ask what the next concrete action is and when the user will do it.
-- Keep responses short — 2-4 sentences. You are a doer, not a lecturer.`;
+CRITICAL BEHAVIORS:
+1. NEVER just say "Here is a reminder." Instead, break tasks down into micro-steps or write drafts for them immediately.
+2. If the user clicks "Time-Block My Day" or requests schedule suggestions, call 'suggest_schedule' to get active tasks and calendar events. Then, look closely at their active tasks and output a strict, hyper-realistic hourly calendar block schedule.
+3. Identify friction: If a task requires an action (like paying a bill, emailing someone, or writing a report), provide the exact action steps, links (if applicable), or text templates they need so they can execute it in 1 click.
+4. When the user mentions any task, deadline, assignment, bill, interview, or commitment, capture it immediately by calling 'add_task'. Don't ask permission first — capture it, then confirm in one brief, action-oriented sentence.
+5. When the user opens a session or asks what to focus on, call 'get_priorities' to see their current task list ranked by urgency before responding.
+
+RESPONSE FORMAT:
+Always return clean markdown with bold callouts, clear actionable check-lists, and time metrics. Keep your tone encouraging but urgent.`;
 
 const toolsList = [
   {
@@ -439,14 +524,38 @@ app.post('/api/chat', async (req, res) => {
     let finalResponseText = '';
 
     while (loopCount < maxLoops) {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
-        contents: contents,
-        config: {
-          systemInstruction: Nudge_systemInstruction,
-          tools: [{ functionDeclarations: toolsList as any }]
+      let response: any = null;
+      let attempt = 0;
+      const maxAttempts = 3; // 1 initial + 2 retries
+      const delays = [1500, 3000];
+
+      while (attempt < maxAttempts) {
+        try {
+          response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: contents,
+            config: {
+              systemInstruction: Nudge_systemInstruction,
+              tools: [{ functionDeclarations: toolsList as any }]
+            }
+          });
+          break; // Success! Break out of the retry loop.
+        } catch (error: any) {
+          const errStr = (error.message || '').toUpperCase();
+          const isUnavailable = error.status === 503 || error.status === 'UNAVAILABLE' || errStr.includes('503') || errStr.includes('UNAVAILABLE') || errStr.includes('OVERLOADED');
+          const isRateLimit = error.status === 429 || error.status === 'RESOURCE_EXHAUSTED' || errStr.includes('429') || errStr.includes('RESOURCE_EXHAUSTED') || errStr.includes('QUOTA') || errStr.includes('LIMIT');
+          
+          if ((isUnavailable || isRateLimit) && attempt < maxAttempts - 1) {
+            const delay = isRateLimit ? 2500 : delays[attempt];
+            console.warn(`[Gemini API Retry] Attempt ${attempt + 1} failed with ${error.status || 'Error'}. Retrying in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            attempt++;
+          } else {
+            console.error(`[Gemini API Error] Final attempt ${attempt + 1} failed:`, error);
+            throw error; // Re-throw if we have exhausted all retries
+          }
         }
-      });
+      }
 
       const candidate = response.candidates?.[0];
       const modelContent = candidate?.content;
@@ -516,7 +625,19 @@ app.post('/api/chat', async (req, res) => {
 
   } catch (error: any) {
     console.error('Error in chat API:', error);
-    res.status(500).json({ error: error.message });
+    const errStr = (error.message || '').toUpperCase();
+    const isUnavailable = error.status === 503 || error.status === 'UNAVAILABLE' || errStr.includes('503') || errStr.includes('UNAVAILABLE') || errStr.includes('OVERLOADED');
+    const isQuotaExceeded = error.status === 429 || error.status === 'RESOURCE_EXHAUSTED' || errStr.includes('429') || errStr.includes('RESOURCE_EXHAUSTED') || errStr.includes('QUOTA') || errStr.includes('LIMIT');
+    
+    if (isUnavailable) {
+      res.status(503).json({ error: 'UNAVAILABLE: Gemini is currently overloaded or temporarily unavailable. Please try again.' });
+    } else if (isQuotaExceeded) {
+      res.status(429).json({ 
+        error: 'QUOTA_EXCEEDED: You have temporarily reached the Gemini API daily quota on the free tier. To resolve this and unlock unlimited queries instantly, please go to the Settings menu (the gear icon) in AI Studio and add your own Gemini API Key.'
+      });
+    } else {
+      res.status(500).json({ error: error.message || 'Internal server error occurred' });
+    }
   }
 });
 

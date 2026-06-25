@@ -1,6 +1,6 @@
 {
   "name": "Last-Minute Life Saver",
   "description": "A proactive, chat-based AI productivity assistant called Nudge to help you beat deadlines, sync with Google Calendar, and stay on top of tasks.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

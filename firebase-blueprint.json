@@ -1,0 +1,56 @@
+{
+  "entities": {
+    "Task": {
+      "title": "Task",
+      "description": "A productivity task or deadline for the user",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Short description of the task"
+        },
+        "due_date": {
+          "type": "string",
+          "description": "ISO 8601 date or datetime the task is due, e.g. 2026-06-27T18:00:00"
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "urgent"],
+          "description": "Priority level of the task"
+        },
+        "category": {
+          "type": "string",
+          "description": "Category, e.g. assignment, bill, meeting, interview"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "in-progress", "completed"],
+          "description": "Status of the task"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner of the task"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the task was created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the task was last updated"
+        }
+      },
+      "required": ["title", "due_date", "priority", "status", "userId", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "tasks/{taskId}": {
+      "schema": {
+        "$ref": "#/entities/Task"
+      },
+      "description": "Collection of tasks owned by users"
+    }
+  }
+}

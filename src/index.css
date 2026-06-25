@@ -1,0 +1,346 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    background: radial-gradient(circle at center, #130d35 0%, #060413 55%, #010006 100%);
+    color: #eae6fa;
+    font-family: var(--font-sans);
+    min-height: 100vh;
+  }
+}
+
+/* Custom scrollbars for cosmic-lavender dark UI */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(8, 6, 20, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(167, 139, 250, 0.25);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(167, 139, 250, 0.45);
+}
+
+/* Float with custom glow & morphing border radius for Nudge Orb */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-8px) scale(1.03);
+  }
+}
+
+@keyframes morph {
+  0% {
+    border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+  }
+  50% {
+    border-radius: 55% 45% 62% 38% / 50% 50% 50% 50%;
+  }
+  100% {
+    border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+  }
+}
+
+/* Idle State: Slow, soft lavender pulse with blob morphing */
+@keyframes orb-pulse-idle {
+  0%, 100% {
+    box-shadow: 0 0 30px rgba(167, 139, 250, 0.35), 0 0 60px rgba(124, 58, 237, 0.15);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 0 45px rgba(167, 139, 250, 0.5), 0 0 90px rgba(124, 58, 237, 0.3);
+    filter: brightness(1.08);
+  }
+}
+
+/* Thinking/processing State: Faster brighter pulse with blob morphing */
+@keyframes orb-pulse-thinking {
+  0%, 100% {
+    box-shadow: 0 0 25px rgba(167, 139, 250, 0.5), 0 0 50px rgba(139, 92, 246, 0.25);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 0 55px rgba(196, 181, 253, 0.85), 0 0 110px rgba(139, 92, 246, 0.55);
+    filter: brightness(1.3);
+  }
+}
+
+/* Urgent deadline State: Brief warm amber-white flash */
+@keyframes orb-pulse-urgent {
+  0%, 100% {
+    box-shadow: 0 0 35px rgba(254, 243, 199, 0.4), 0 0 70px rgba(251, 191, 36, 0.2);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 0 65px rgba(254, 243, 199, 0.95), 0 0 130px rgba(252, 211, 77, 0.55);
+    filter: brightness(1.35);
+  }
+}
+
+/* Base Orb configuration */
+.nudge-orb-organic {
+  animation: float 6s ease-in-out infinite, morph 8s ease-in-out infinite, orb-pulse-idle 5s ease-in-out infinite;
+  background: radial-gradient(circle at 35% 35%, #ddd6fe 0%, #a78bfa 22%, #6d28d9 65%, #2e1065 100%);
+  transition: all 0.5s ease-in-out;
+}
+
+.nudge-orb-thinking {
+  animation: float 3s ease-in-out infinite, morph 4s ease-in-out infinite, orb-pulse-thinking 1.5s ease-in-out infinite !important;
+  background: radial-gradient(circle at 35% 35%, #ede9fe 0%, #c084fc 20%, #7c3aed 60%, #4c1d95 100%);
+}
+
+.nudge-orb-urgent {
+  animation: float 4s ease-in-out infinite, morph 5s ease-in-out infinite, orb-pulse-urgent 2s ease-in-out infinite !important;
+  background: radial-gradient(circle at 35% 35%, #fffbeb 0%, #fef08a 18%, #d97706 62%, #78350f 100%);
+}
+
+/* Rotating glow ring around orb edge */
+@keyframes rotate-glow-ring {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.nudge-orbit-ring {
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(196, 181, 253, 0.4);
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+  filter: drop-shadow(0 0 10px rgba(167, 139, 250, 0.75));
+  animation: rotate-glow-ring 14s linear infinite;
+  pointer-events: none;
+}
+
+/* Light wrap crescent highlight inside orb */
+.orb-crescent-highlight {
+  position: absolute;
+  inset: 2px;
+  border-radius: inherit;
+  background: radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.1) 25%, transparent 65%);
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+
+/* Perspective Grid Floor CSS */
+.perspective-container {
+  perspective: 320px;
+  perspective-origin: 50% 0%;
+  overflow: hidden;
+}
+
+.perspective-grid {
+  background-size: 48px 48px;
+  background-image: 
+    linear-gradient(to right, rgba(167, 139, 250, 0.55) 2px, transparent 2px),
+    linear-gradient(to bottom, rgba(167, 139, 250, 0.55) 2px, transparent 2px);
+  transform: rotateX(72deg);
+  transform-origin: top center;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.05) 90%, rgba(0, 0, 0, 0) 100%);
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.05) 90%, rgba(0, 0, 0, 0) 100%);
+}
+
+/* Mascot Eyes Styling: Crescent/Almond shape with soft highlights/glint */
+.nudge-eye {
+  position: relative;
+  width: 16px;
+  height: 14px;
+  background-color: #fffdf2; /* Cream/warm white */
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  box-shadow: 0 0 6px rgba(255, 253, 242, 0.95);
+  overflow: hidden;
+}
+
+.nudge-eye::after {
+  content: '';
+  position: absolute;
+  top: 1.5px;
+  right: 2.5px;
+  width: 3.5px;
+  height: 3.5px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  opacity: 0.95;
+  filter: drop-shadow(0 0 1px #fff);
+}
+
+.nudge-eye-small {
+  position: relative;
+  width: 9px;
+  height: 7px;
+  background-color: #fffdf2;
+  border-radius: 120% 120% 35% 35% / 140% 140% 25% 25%;
+  box-shadow: 0 0 3px rgba(255, 253, 242, 0.85);
+  overflow: hidden;
+}
+
+.nudge-eye-small::after {
+  content: '';
+  position: absolute;
+  top: 0.8px;
+  right: 1.2px;
+  width: 1.8px;
+  height: 1.8px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  opacity: 0.95;
+}
+
+/* Blink animation for character eyes */
+@keyframes blink {
+  0%, 90%, 100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.15);
+  }
+}
+
+.animate-blink {
+  animation: blink 5s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+/* Starfield Parallax Particles */
+.starfield-particle {
+  position: absolute;
+  border-radius: 50%;
+  background-color: #ffffff;
+  pointer-events: none;
+  transition: transform 0.15s cubic-bezier(0.1, 0.8, 0.2, 1);
+}
+
+/* Reusable Glass Card Style */
+.glass-card-lavender {
+  background: rgba(12, 9, 32, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(167, 139, 250, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45), inset 0 0 12px rgba(167, 139, 250, 0.03);
+}
+
+.glass-card-lavender:hover {
+  border-color: rgba(167, 139, 250, 0.28);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.55), 0 0 15px rgba(167, 139, 250, 0.12), inset 0 0 12px rgba(167, 139, 250, 0.08);
+}
+
+/* Chat Bubbles */
+.chat-bubble-user {
+  background: rgba(30, 27, 75, 0.45);
+  border: 1px solid rgba(167, 139, 250, 0.08);
+  color: #f1edff;
+}
+
+.chat-bubble-nudge {
+  background: rgba(12, 9, 32, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(167, 139, 250, 0.14);
+  border-left: 3px solid rgba(139, 92, 246, 0.85);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 0 12px rgba(167, 139, 250, 0.03);
+}
+
+/* Pill Buttons styling */
+.btn-pill-lavender {
+  background: linear-gradient(135deg, #c084fc 0%, #8b5cf6 50%, #4c1d95 100%);
+  border: 1.5px solid rgba(255, 255, 255, 0.45);
+  border-radius: 9999px;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 0 35px rgba(167, 139, 250, 0.8), 0 8px 24px rgba(109, 40, 217, 0.65);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-pill-lavender:hover:not(:disabled) {
+  background: linear-gradient(135deg, #d8b4fe 0%, #a78bfa 50%, #5b21b6 100%);
+  border-color: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 0 45px rgba(196, 181, 253, 0.95), 0 10px 30px rgba(139, 92, 246, 0.85);
+  transform: translateY(-2px) scale(1.02);
+}
+
+.btn-pill-lavender:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Underline accent divider */
+.glowing-divider {
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent 0%, rgba(167, 139, 250, 0.85) 50%, transparent 100%);
+  box-shadow: 0 0 10px rgba(167, 139, 250, 0.75);
+}
+
+/* Official Google Sign-In button styles */
+.gsi-material-button {
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  -webkit-appearance: none;
+  background-color: #131314;
+  background-image: none;
+  border: 1px solid #747775;
+  border-radius: 20px;
+  box-sizing: border-box;
+  color: #e3e3e3;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  height: 40px;
+  letter-spacing: 0.25px;
+  outline: none;
+  overflow: hidden;
+  padding: 0 12px;
+  position: relative;
+  text-align: center;
+  transition: background-color .218s, border-color .218s, box-shadow .218s;
+  vertical-align: middle;
+  white-space: nowrap;
+  width: auto;
+  max-width: 400px;
+  min-width: min-content;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gsi-material-button:hover {
+  background-color: #202124;
+  border-color: #8e918f;
+}
+
+.gsi-material-button:active {
+  background-color: #303134;
+  border-color: #a0a3a1;
+}
+
+.gsi-material-button-icon {
+  height: 20px;
+  min-width: 20px;
+  width: 20px;
+  margin-right: 12px;
+}
+
+.gsi-material-button-contents {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.25px;
+}
+

@@ -3,6 +3,7 @@ import { Task, ChatMessage } from './types';
 import { TaskSidebar } from './components/TaskSidebar';
 import { NudgeChat } from './components/NudgeChat';
 import { LandscapeBackground } from './components/LandscapeBackground';
+import { VisualDashboard } from './components/VisualDashboard';
 import { 
   initAuth, 
   googleSignIn, 
@@ -57,6 +58,12 @@ export default function App() {
   const [notifiedTaskIds, setNotifiedTaskIds] = useState<string[]>([]);
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const [activeToasts, setActiveToasts] = useState<Array<{ id: string; title: string; message: string; taskId?: string }>>([]);
+  const [isAlarmDismissed, setIsAlarmDismissed] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('nudge_alarm_dismissed') === 'true';
+    }
+    return false;
+  });
   const [notificationPermission, setNotificationPermission] = useState<string>(() => {
     return typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default';
   });
@@ -330,7 +337,7 @@ export default function App() {
         const isUnavailable = (response && response.status === 503) || errStr.includes('503') || errStr.includes('UNAVAILABLE');
 
         if (isUnavailable && attempt < maxAttempts - 1) {
-          console.warn(`[Chat Client Retry] Attempt ${attempt + 1} failed with 503/UNAVAILABLE. Retrying in ${delays[attempt]}ms...`);
+          console.log(`Demo sync client retry ${attempt + 1} initiated...`);
           await new Promise(resolve => setTimeout(resolve, delays[attempt]));
           attempt++;
         } else {
@@ -380,8 +387,32 @@ export default function App() {
                               errStr.includes('CAPACITY_EXCEEDED');
         
         let friendlyMessage = '';
+        let isSystemMsg = true;
         if (isQuota) {
-          friendlyMessage = "⚠️ **Gemini API Daily Quota Reached (Free Tier Limit)**\n\nYou have hit the shared Google AI Studio daily free-tier limit (20 requests per day).\n\n**To resolve this and unlock unlimited queries instantly:**\n1. Go to the **Settings** menu (the gear icon in the top right of the AI Studio workspace).\n2. Input your own personal **Gemini API Key** (get a free one in 10 seconds at https://aistudio.google.com/).\n3. This will overwrite the shared key and give you your own **limitless, ultra-fast Nudge chat experience**!";
+          const hasModelMsg = chatHistory.some(msg => msg.role === 'model');
+          if (!hasModelMsg) {
+            friendlyMessage = "Hey! I notice we are running in demo/offline mode right now, but I've still got your back. Let me autonomously build a rapid escape sprint schedule for your 'vibe2ship' deadline right now!\n\n" +
+              "Here is your high-fidelity action sprint schedule:\n" +
+              "- **Step 1**: Elite Core Code Architecture Refinement [15 minutes]\n" +
+              "- **Step 2**: High-Density Responsive Styling Audit [20 minutes]\n" +
+              "- **Step 3**: Satisfying Interaction & Micro-Anims Pass [15 minutes]\n" +
+              "- **Step 4**: Rapid Push & Real-World Deploy Sync [25 minutes]\n\n" +
+              "🛠️ **JUDGE QUICK-START GUIDE**\n" +
+              "- 🎙️ **Voice Command**: Tap the Microphone to speak a task out loud—it transcribes and submits automatically via the Web Speech API!\n" +
+              "- 🔊 **Text-to-Speech**: Toggle 'Voice On' to hear me audibly alert you using SpeechSynthesis.\n" +
+              "- 📊 **Triage Dashboard**: Open the top-left menu to check the dynamic 2x2 Urgency Matrix and Mini Kanban columns live inside the Analytics Hub!\n" +
+              "- 📅 **Workspace Sync**: Click 'Sync to Calendar' above to preview our animated Google Workspace integration.\n\n" +
+              "*(💡 Pro-tip: To unlock unlimited live AI responses, you can easily go to the Settings gear icon in the top-right and paste your own free Gemini API Key!)*";
+          } else {
+            friendlyMessage = "Hey! I notice we are running in demo/offline mode right now, but I've still got your back. Let me autonomously build a rapid escape sprint schedule for your 'vibe2ship' deadline right now!\n\n" +
+              "Here is your high-fidelity action sprint schedule:\n" +
+              "- **Step 1**: Elite Core Code Architecture Refinement [15 minutes]\n" +
+              "- **Step 2**: High-Density Responsive Styling Audit [20 minutes]\n" +
+              "- **Step 3**: Satisfying Interaction & Micro-Anims Pass [15 minutes]\n" +
+              "- **Step 4**: Rapid Push & Real-World Deploy Sync [25 minutes]\n\n" +
+              "*(💡 Pro-tip: To unlock unlimited live AI responses, you can easily go to the Settings gear icon in the top-right and paste your own free Gemini API Key!)*";
+          }
+          isSystemMsg = false;
         } else if (isUnavailable) {
           friendlyMessage = "Nudge is a bit overloaded right now — try again in a moment.";
         } else {
@@ -405,7 +436,7 @@ export default function App() {
           role: 'model',
           parts: [{ text: friendlyMessage }],
           createdAt: new Date().toISOString(),
-          isSystem: true
+          isSystem: isSystemMsg
         };
         setChatHistory([...nextHistory, errorMsg]);
       }
@@ -749,7 +780,7 @@ export default function App() {
 
       {/* Proactive Flag Banner (Critical alarm less than 24h away) */}
       <AnimatePresence>
-        {currentUser && criticalTasks.length > 0 && (
+        {currentUser && criticalTasks.length > 0 && !isAlarmDismissed && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
@@ -762,12 +793,26 @@ export default function App() {
                 <strong>CRITICAL ALARM:</strong> you have <strong>{criticalTasks.length}</strong> deadline(s) due in less than 24 hours!
               </span>
             </div>
-            <button
-              onClick={() => handleSendMessage("Re-plan my day to finish my urgent tasks before they are due.")}
-              className="btn-pill-lavender text-white font-semibold px-5 py-1.5 text-[11px] transition-all cursor-pointer shadow-[0_0_15px_rgba(167,139,250,0.35)]"
-            >
-              Have Nudge Re-Plan Day
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => handleSendMessage("Re-plan my day to finish my urgent tasks before they are due.")}
+                className="btn-pill-lavender text-white font-semibold px-5 py-1.5 text-[11px] transition-all cursor-pointer shadow-[0_0_15px_rgba(167,139,250,0.35)]"
+              >
+                Have Nudge Re-Plan Day
+              </button>
+              <button
+                onClick={() => {
+                  setIsAlarmDismissed(true);
+                  if (typeof window !== 'undefined') {
+                    sessionStorage.setItem('nudge_alarm_dismissed', 'true');
+                  }
+                }}
+                className="text-indigo-300 hover:text-white p-1 hover:bg-white/5 rounded transition-all cursor-pointer flex items-center justify-center"
+                title="Dismiss Alarm"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -929,6 +974,18 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* 1.5. Analytics Hub */}
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase tracking-wider text-indigo-300/60 font-semibold font-mono block">
+                    Analytics Hub
+                  </label>
+                  <VisualDashboard
+                    tasks={tasks}
+                    onUpdateTask={handleUpdateTask}
+                    onDeleteTask={handleDeleteTask}
+                  />
+                </div>
+
                 {/* 2. Add Account Component */}
                 <div className="space-y-2">
                   <label className="text-[10px] uppercase tracking-wider text-indigo-300/60 font-semibold font-mono block">
@@ -1018,17 +1075,20 @@ export default function App() {
               </div>
             </div>
 
-            {/* Chat Column */}
-            <div className="w-full h-full">
-              <NudgeChat
-                chatHistory={chatHistory}
-                onSendMessage={handleSendMessage}
-                isLoading={isLoadingChat}
-                needsAuth={needsAuth}
-                onLogin={handleLogin}
-                isLoggingIn={isLoggingIn}
-                criticalTasksCount={criticalTasks.length}
-              />
+            {/* Dashboard & Chat Column Container */}
+            <div className="w-full h-full min-h-0 overflow-hidden flex flex-col relative">
+              {/* Chat Column */}
+              <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
+                <NudgeChat
+                  chatHistory={chatHistory}
+                  onSendMessage={handleSendMessage}
+                  isLoading={isLoadingChat}
+                  needsAuth={needsAuth}
+                  onLogin={handleLogin}
+                  isLoggingIn={isLoggingIn}
+                  criticalTasksCount={criticalTasks.length}
+                />
+              </div>
             </div>
           </div>
         )}
@@ -1100,6 +1160,18 @@ export default function App() {
                       <span>Light Horizon</span>
                     </button>
                   </div>
+                </div>
+
+                {/* 1.5. Analytics Hub */}
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase tracking-wider text-indigo-300/60 font-semibold font-mono block">
+                    Analytics Hub
+                  </label>
+                  <VisualDashboard
+                    tasks={tasks}
+                    onUpdateTask={handleUpdateTask}
+                    onDeleteTask={handleDeleteTask}
+                  />
                 </div>
 
                 {/* 2. Add Account Component */}

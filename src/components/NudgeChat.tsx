@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '../types';
+import { InteractiveActionTimeline } from './InteractiveActionTimeline';
 import { 
   Send, 
   Sparkles, 
@@ -14,6 +15,7 @@ import {
   Mic,
   MicOff,
   Volume2,
+  VolumeX,
   Play,
   Pause,
   Trash2,
@@ -167,6 +169,60 @@ export const NudgeChat: React.FC<NudgeChatProps> = ({
   const timerRef = useRef<any>(null);
   const recognitionRef = useRef<any>(null);
 
+  const [aiVoiceEnabled, setAiVoiceEnabled] = useState(() => {
+    return localStorage.getItem('ai_voice_responses') === 'true';
+  });
+  const latestTranscriptRef = useRef('');
+  const lastSpokenMessageIdRef = useRef<string | null>(null);
+
+  // Auto Scroll & SpeechSynthesis Trigger
+  useEffect(() => {
+    localStorage.setItem('ai_voice_responses', aiVoiceEnabled ? 'true' : 'false');
+    if (!aiVoiceEnabled) {
+      window.speechSynthesis?.cancel();
+    }
+  }, [aiVoiceEnabled]);
+
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis?.cancel();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!aiVoiceEnabled || chatHistory.length === 0) return;
+    const lastMsg = chatHistory[chatHistory.length - 1];
+    
+    if (lastMsg.role === 'model' && lastMsg.id !== lastSpokenMessageIdRef.current) {
+      lastSpokenMessageIdRef.current = lastMsg.id;
+      
+      const textPart = lastMsg.parts.find(p => p.text)?.text;
+      if (textPart) {
+        // Clean markdown tags, emojis, and brackets for crystal-clear SpeechSynthesis output
+        const cleanText = textPart
+          .replace(/[*#`_\-🎙️🌸🚨⏳✨●]/g, '')
+          .replace(/\[[^\]]*\]/g, '')
+          .replace(/\([-a-zA-Z0-9\s]+\)/g, '')
+          .trim();
+
+        if (cleanText) {
+          window.speechSynthesis?.cancel();
+          const utterance = new SpeechSynthesisUtterance(cleanText);
+          if (window.speechSynthesis) {
+            const voices = window.speechSynthesis.getVoices();
+            const enVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google')) || 
+                            voices.find(v => v.lang.startsWith('en'));
+            if (enVoice) {
+              utterance.voice = enVoice;
+            }
+          }
+          utterance.rate = 1.05;
+          window.speechSynthesis?.speak(utterance);
+        }
+      }
+    }
+  }, [chatHistory, aiVoiceEnabled]);
+
   // Auto scroll
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -177,9 +233,13 @@ export const NudgeChat: React.FC<NudgeChatProps> = ({
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
       const rec = new SpeechRecognition();
-      rec.continuous = true;
+      rec.continuous = false; // Stops automatically when user stops speaking
       rec.interimResults = true;
       rec.lang = 'en-US';
+
+      rec.onstart = () => {
+        latestTranscriptRef.current = '';
+      };
 
       rec.onresult = (event: any) => {
         let interimTranscript = '';
@@ -194,13 +254,15 @@ export const NudgeChat: React.FC<NudgeChatProps> = ({
         }
 
         if (finalTranscript) {
-          // If we are listening, add text to input
-          setInputText(prev => prev + (prev ? ' ' : '') + finalTranscript);
+          setInputText(prev => {
+            const updated = prev + (prev ? ' ' : '') + finalTranscript;
+            latestTranscriptRef.current = updated;
+            return updated;
+          });
         }
       };
 
       rec.onerror = (event: any) => {
-        // Handle common non-fatal warnings
         if (event.error === 'no-speech' || event.error === 'aborted') {
           console.warn('Speech recognition warning:', event.error);
           return;
@@ -217,6 +279,12 @@ export const NudgeChat: React.FC<NudgeChatProps> = ({
 
       rec.onend = () => {
         setIsListening(false);
+        const finalSpeech = latestTranscriptRef.current.trim();
+        if (finalSpeech) {
+          onSendMessage(finalSpeech);
+          setInputText('');
+          latestTranscriptRef.current = '';
+        }
       };
 
       recognitionRef.current = rec;
@@ -235,6 +303,7 @@ export const NudgeChat: React.FC<NudgeChatProps> = ({
       setIsListening(false);
     } else {
       try {
+        latestTranscriptRef.current = '';
         recognitionRef.current.start();
         setIsListening(true);
       } catch (err: any) {
@@ -408,10 +477,30 @@ export const NudgeChat: React.FC<NudgeChatProps> = ({
       );
     }
 
+    const lowerText = textPart.toLowerCase();
+    const hasStudyPlan = (
+      lowerText.includes('should i draft a custom step-by-step revision schedule') ||
+      lowerText.includes('revision schedule') ||
+      lowerText.includes('study block') ||
+      lowerText.includes('action plan') ||
+      lowerText.includes('sprint schedule') ||
+      lowerText.includes('micro-goals') ||
+      lowerText.includes('sprint timer') ||
+      lowerText.includes('interactive timeline') ||
+      lowerText.includes('action timeline') ||
+      (lowerText.includes('step 1') && lowerText.includes('step 2')) ||
+      (lowerText.includes('- [ ]') && lowerText.includes('min'))
+    );
+
     return (
-      <p className="text-sm text-indigo-100 leading-relaxed whitespace-pre-wrap font-sans">
-        {textPart}
-      </p>
+      <div className="space-y-3 w-full">
+        <p className="text-sm text-indigo-100 leading-relaxed whitespace-pre-wrap font-sans">
+          {textPart}
+        </p>
+        {hasStudyPlan && (
+          <InteractiveActionTimeline messageText={textPart} />
+        )}
+      </div>
     );
   };
 
@@ -703,9 +792,13 @@ export const NudgeChat: React.FC<NudgeChatProps> = ({
                       type="button"
                       onClick={toggleListening}
                       title="Voice-to-Text Transcription"
-                      className={`p-1.5 rounded-xl hover:bg-white/5 transition-all cursor-pointer ${isListening ? 'text-violet-400 bg-violet-950/40 animate-pulse border border-violet-800/30' : 'text-indigo-300/70 hover:text-white'}`}
+                      className={`p-1.5 rounded-xl transition-all cursor-pointer ${
+                        isListening 
+                          ? 'text-violet-300 bg-violet-600/30 border border-violet-400/50 shadow-[0_0_15px_rgba(139,92,246,0.6)] animate-pulse scale-105' 
+                          : 'text-indigo-300/70 hover:text-white hover:bg-white/5'
+                      }`}
                     >
-                      {isListening ? <MicOff className="w-4 h-4 text-violet-400" /> : <Mic className="w-4 h-4" />}
+                      <Mic className={`w-4 h-4 ${isListening ? 'animate-bounce text-violet-300' : ''}`} />
                     </button>
                   </>
                 )}
@@ -721,6 +814,32 @@ export const NudgeChat: React.FC<NudgeChatProps> = ({
                   className="w-10 h-10 rounded-2xl bg-[#0f0b2a]/90 border border-[#251e4d]/70 hover:border-violet-500/50 flex items-center justify-center text-indigo-300 hover:text-violet-300 transition-all cursor-pointer shrink-0 hover:bg-[#150e4a]"
                 >
                   <Volume2 className="w-4 h-4 text-violet-400" />
+                </button>
+              )}
+
+              {/* AI Voice Response Switch Toggle */}
+              {!isRecording && (
+                <button
+                  type="button"
+                  onClick={() => setAiVoiceEnabled(!aiVoiceEnabled)}
+                  title={aiVoiceEnabled ? "Mute AI Voice Responses" : "Enable AI Voice Responses"}
+                  className={`w-10 h-10 rounded-2xl border flex flex-col items-center justify-center transition-all cursor-pointer shrink-0 relative ${
+                    aiVoiceEnabled 
+                      ? 'bg-violet-600/20 border-violet-500/50 text-violet-300 shadow-[0_0_12px_rgba(139,92,246,0.25)] hover:bg-violet-600/30' 
+                      : 'bg-[#0f0b2a]/90 border-[#251e4d]/70 text-zinc-500 hover:text-zinc-400 hover:border-zinc-700'
+                  }`}
+                >
+                  {aiVoiceEnabled ? (
+                    <>
+                      <Volume2 className="w-4 h-4 text-emerald-400 animate-pulse" />
+                      <span className="text-[7px] font-bold uppercase tracking-wider text-emerald-400 font-mono mt-0.5 leading-none">Voice On</span>
+                    </>
+                  ) : (
+                    <>
+                      <VolumeX className="w-4 h-4" />
+                      <span className="text-[7px] font-bold uppercase tracking-wider text-zinc-500 font-mono mt-0.5 leading-none">Voice Off</span>
+                    </>
+                  )}
                 </button>
               )}
 

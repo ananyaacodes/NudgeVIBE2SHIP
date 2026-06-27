@@ -561,7 +561,7 @@ export default function App() {
       className={`flex flex-col ${needsAuth ? 'min-h-screen h-auto overflow-y-auto' : 'h-screen overflow-hidden'} w-full bg-transparent text-zinc-100 selection:bg-violet-600 selection:text-white font-sans relative`}
     >
       {/* Floating Active Toasts */}
-      <div className="fixed top-20 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+      <div className="fixed top-20 left-4 right-4 sm:left-auto sm:right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
         <AnimatePresence>
           {activeToasts.map((toast) => (
             <motion.div
@@ -611,7 +611,7 @@ export default function App() {
       </div>
 
       {/* Dynamic Header */}
-      <header className="flex items-center justify-between px-4 sm:px-6 py-4 bg-[#0d0926]/85 border-b border-[#251e4d]/40 backdrop-blur-md shrink-0 z-10">
+      <header className="flex items-center justify-between px-4 sm:px-6 py-4 bg-[#0d0926]/85 border-b border-[#251e4d]/40 backdrop-blur-md shrink-0 z-40">
         <div className="flex items-center gap-2 sm:gap-3">
           {currentUser && (
             <button
@@ -661,7 +661,7 @@ export default function App() {
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute right-0 mt-2 w-80 bg-[#0c0824] border border-[#251e4d]/80 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.85)] p-4 z-50 space-y-3 font-sans backdrop-blur-md"
+                    className="absolute right-0 sm:right-0 mt-2 w-[calc(100vw-32px)] sm:w-80 bg-[#0c0824] border border-[#251e4d]/80 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.85)] p-4 z-50 space-y-3 font-sans backdrop-blur-md"
                   >
                     <div className="flex items-center justify-between border-b border-[#251e4d]/30 pb-2">
                       <div className="flex items-center gap-1.5">

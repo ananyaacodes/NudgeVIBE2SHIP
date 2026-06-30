@@ -102,29 +102,12 @@ The challenge was to build an AI-powered assistant that doesn't just remind user
 
 ---
 
-# 📸 Screenshots
-
-> *(Add screenshots of your application here before final submission.)*
-
-### Dashboard
-
-<img src="screenshots/dashboard.png" width="900">
-
-### AI Task Planner
-
-<img src="screenshots/planner.png" width="900">
-
-### Smart Scheduler
-
-<img src="screenshots/scheduler.png" width="900">
-
----
 
 # 🎥 Demo
 
 **Live Application**
 
-> **<Paste your Google AI Studio deployment link here>**
+> **<(https://nudge-vibe2ship-ol4ain9i2-ananyaacodes-projects.vercel.app/)>**
 
 ---
 

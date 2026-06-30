@@ -1,12 +1,12 @@
 <div align="center">
 
-# 🚀 The Last-Minute Life Saver
+# 🚀 NUDGE: The Last-Minute Life Saver
 
 ### *Your AI Productivity Companion That Helps You Finish Tasks, Not Just Remember Them.*
 
 <p>
 Built for <b>Vibe2Ship Hackathon 2026</b><br>
-Coding Ninjas × Google Developer Groups
+Coding Ninjas × Google For Developers
 </p>
 
 ![Google AI Studio](https://img.shields.io/badge/Google%20AI%20Studio-4285F4?style=for-the-badge&logo=google&logoColor=white)
@@ -22,7 +22,7 @@ Coding Ninjas × Google Developer Groups
 
 # 🌟 Overview
 
-**The Last-Minute Life Saver** is an AI-powered productivity companion that goes beyond traditional reminders.
+**Nudge** is an AI-powered productivity companion that goes beyond traditional reminders.
 
 Instead of simply notifying users about upcoming deadlines, it actively analyzes priorities, workload, urgency, and available time to generate intelligent action plans that help users complete their tasks before it's too late.
 
@@ -174,7 +174,7 @@ src/
 
 Organized by:
 
-**Coding Ninjas × Google Developer Groups**
+**Coding Ninjas × Google For Developers**
 
 ---
 

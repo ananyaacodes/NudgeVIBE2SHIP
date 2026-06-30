@@ -107,7 +107,7 @@ The challenge was to build an AI-powered assistant that doesn't just remind user
 
 **Live Application**
 
-> **<(https://nudge-vibe2ship-ol4ain9i2-ananyaacodes-projects.vercel.app/)>**
+> **https://nudge-vibe2ship-ol4ain9i2-ananyaacodes-projects.vercel.app/**
 
 ---
 

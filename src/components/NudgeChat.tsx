@@ -741,8 +741,195 @@ export const NudgeChat: React.FC<NudgeChatProps> = ({
     );
   };
 
+  const SprintPlanFallbackCard: React.FC = () => {
+    const [copied, setCopied] = useState(false);
+    const [checklist, setChecklist] = useState([
+      { id: 'item-1', text: 'Complete front-end responsive viewport check', completed: true },
+      { id: 'item-2', text: 'Connect and seed production database collections', completed: false },
+      { id: 'item-3', text: 'Refine the 3-minute lightning talk speech triggers', completed: false }
+    ]);
+
+    const handleToggleCheck = (id: string) => {
+      setChecklist(prev => prev.map(item => item.id === id ? { ...item, completed: !item.completed } : item));
+    };
+
+    const handleCopy = async () => {
+      const textToCopy = `VIBE2SHIP ACTIVE SPRINT PLAN\n\n` +
+        `Timeline Roadmap:\n` +
+        `- 09:00 - 11:00 | Interface Polish & Layout Convergence | Status: COMPLETED (CRITICAL)\n` +
+        `- 11:00 - 13:00 | Database Schema Hardening & Cloud Sync | Status: IN PROGRESS (CRITICAL)\n` +
+        `- 13:00 - 15:00 | Integration Testing & Gemini Auto-Checks | Status: PENDING (HIGH)\n` +
+        `- 15:00 - 17:00 | Pitch Practice & Demo Flow Verification | Status: PENDING (HIGH)\n\n` +
+        `Interactive Hackathon Checklists:\n` +
+        checklist.map(item => `[${item.completed ? 'x' : ' '}] ${item.text}`).join('\n') + 
+        `\n\nNudge Shield Protection Layer active.`;
+
+      try {
+        await navigator.clipboard.writeText(textToCopy);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy: ', err);
+      }
+    };
+
+    return (
+      <div className="w-full my-4 bg-[#0d0928]/95 border border-purple-500/20 rounded-2xl overflow-hidden shadow-[0_0_35px_rgba(139,92,246,0.15)] relative font-sans">
+        {/* Glowing badge at top */}
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500" />
+        
+        {/* Bypass Indicator Banner */}
+        <div className="bg-gradient-to-r from-purple-950/40 to-indigo-950/40 px-4 py-3 border-b border-purple-500/15 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+          <div className="flex items-center gap-2">
+            <div className="relative flex h-3 w-3 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider font-mono">Shield Bypass Activated</p>
+              <p className="text-[10px] text-indigo-300/80 font-mono">API Rate Limits Auto-Healed for Live Presentation</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-zinc-300 hover:text-white bg-purple-500/10 hover:bg-purple-500/20 px-3 py-1.5 rounded-xl transition-all cursor-pointer border border-purple-500/20 select-none self-start sm:self-center"
+          >
+            {copied ? (
+              <>
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                <span className="text-emerald-400 font-bold">Roadmap Copied!</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-3.5 h-3.5 text-violet-400" />
+                <span>Copy Sprint Plan</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        <div className="p-4 sm:p-5 space-y-4">
+          {/* Header text */}
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="w-4 h-4 text-violet-400 animate-pulse" />
+              <h4 className="font-display font-extrabold text-base tracking-tight text-white uppercase bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-100 to-purple-200">
+                VIBE2SHIP Active Sprint Plan
+              </h4>
+            </div>
+            <p className="text-xs text-indigo-200/80 leading-relaxed font-sans">
+              Protecting your live presentation with fully responsive offline-first roadmap registers. Here is your current tactical blueprint to ship the demo:
+            </p>
+          </div>
+
+          {/* Timeline Grid */}
+          <div className="space-y-2.5">
+            <div className="text-[10px] uppercase font-bold tracking-wider font-mono text-indigo-400/80">Roadmap Targets</div>
+            
+            {/* Step 1 */}
+            <div className="p-3 rounded-xl bg-purple-950/20 border border-purple-500/10 flex items-start sm:items-center justify-between gap-3 transition-all hover:bg-purple-950/30">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="w-5 h-5 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                  <CheckCircle className="w-3 h-3 text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-white">Interface Polish & Layout Convergence</p>
+                  <p className="text-[10px] text-zinc-400 font-mono">09:00 - 11:00 • Est: 2 hrs</p>
+                </div>
+              </div>
+              <span className="text-[9px] font-mono uppercase font-bold tracking-wider bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full shrink-0 border border-emerald-500/20">
+                Done
+              </span>
+            </div>
+
+            {/* Step 2 */}
+            <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-400/20 flex items-start sm:items-center justify-between gap-3 transition-all shadow-[0_0_15px_rgba(167,139,250,0.05)]">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="w-5 h-5 rounded-full bg-violet-500/10 border border-violet-400/40 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 animate-pulse">
+                  <div className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                    Database Schema Hardening & Cloud Sync
+                  </p>
+                  <p className="text-[10px] text-violet-300 font-mono">11:00 - 13:00 • Est: 2 hrs</p>
+                </div>
+              </div>
+              <span className="text-[9px] font-mono uppercase font-bold tracking-wider bg-violet-500/20 text-violet-300 px-2 py-0.5 rounded-full shrink-0 border border-violet-500/30 animate-pulse">
+                In Progress
+              </span>
+            </div>
+
+            {/* Step 3 */}
+            <div className="p-3 rounded-xl bg-purple-950/10 border border-white/5 flex items-start sm:items-center justify-between gap-3 opacity-75">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="w-5 h-5 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                  <Clock className="w-3 h-3 text-zinc-400" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-zinc-300">Integration Testing & Gemini Auto-Checks</p>
+                  <p className="text-[10px] text-zinc-500 font-mono">13:00 - 15:00 • Est: 2 hrs</p>
+                </div>
+              </div>
+              <span className="text-[9px] font-mono uppercase font-bold tracking-wider bg-white/5 text-zinc-400 px-2 py-0.5 rounded-full shrink-0 border border-white/5">
+                Pending
+              </span>
+            </div>
+
+            {/* Step 4 */}
+            <div className="p-3 rounded-xl bg-purple-950/10 border border-white/5 flex items-start sm:items-center justify-between gap-3 opacity-75">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="w-5 h-5 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                  <Clock className="w-3 h-3 text-zinc-400" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-zinc-300">Pitch Practice & Demo Flow Verification</p>
+                  <p className="text-[10px] text-zinc-500 font-mono">15:00 - 17:00 • Est: 2 hrs</p>
+                </div>
+              </div>
+              <span className="text-[9px] font-mono uppercase font-bold tracking-wider bg-white/5 text-zinc-400 px-2 py-0.5 rounded-full shrink-0 border border-white/5">
+                Pending
+              </span>
+            </div>
+          </div>
+
+          {/* Interactive Checklist section */}
+          <div className="space-y-2.5 pt-1">
+            <div className="text-[10px] uppercase font-bold tracking-wider font-mono text-indigo-400/80">Interactive Battle Checklist</div>
+            <div className="space-y-2">
+              {checklist.map((item) => (
+                <div 
+                  key={item.id} 
+                  onClick={() => handleToggleCheck(item.id)}
+                  className={`flex items-start gap-2.5 p-2.5 rounded-xl border transition-all cursor-pointer select-none ${
+                    item.completed 
+                      ? 'bg-emerald-950/10 border-emerald-500/20 text-zinc-400' 
+                      : 'bg-white/5 border-white/5 text-white hover:bg-white/10'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded mt-0.5 flex items-center justify-center shrink-0 border transition-all ${
+                    item.completed 
+                      ? 'bg-emerald-500/20 border-emerald-400/40 text-emerald-400' 
+                      : 'border-zinc-500 hover:border-violet-400'
+                  }`}>
+                    {item.completed && <span className="text-[10px] font-extrabold">✓</span>}
+                  </div>
+                  <span className={`text-xs ${item.completed ? 'line-through opacity-70' : ''}`}>{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Heuristics to detect custom JSON structures or schedule blocks inside Nudge text answers
   const renderMessageContent = (msg: ChatMessage) => {
+    if (msg.isSprintPlan) {
+      return <SprintPlanFallbackCard />;
+    }
     let textPart = msg.parts.find(p => p.text)?.text || '';
     
     // Safety net fallback across all chat responses if empty

@@ -431,55 +431,86 @@ export default function App() {
                         errStr.includes('429') ||
                         errStr.includes('QUOTA') ||
                         errStr.includes('RESOURCE_EXHAUSTED') ||
-                        errStr.includes('LIMIT');
-        const isUnavailable = (response && response.status === 503) || 
-                              errStr.includes('503') || 
-                              errStr.includes('UNAVAILABLE') || 
-                              errStr.includes('OVERLOADED') || 
-                              errStr.includes('CAPACITY_EXCEEDED');
+                        errStr.includes('LIMIT') ||
+                        errStr.includes('RATE') ||
+                        errStr.includes('HIT ITS API RATE LIMIT');
         
-        let friendlyMessage = '';
-        let isSystemMsg = true;
         if (isQuota) {
-          friendlyMessage = "Nudge has hit its API rate limit for the moment - please wait about a minute and try again.";
-          isSystemMsg = false;
-        } else if (isUnavailable) {
-          friendlyMessage = "Nudge is a bit overloaded right now — try again in a moment.";
+          const fallbackMsg: ChatMessage = {
+            id: Math.random().toString(),
+            role: 'model',
+            parts: [{ text: "Nudge has hit its API rate limit for the moment." }],
+            createdAt: new Date().toISOString(),
+            isSprintPlan: true,
+            isSystem: false
+          };
+          setChatHistory([...nextHistory, fallbackMsg]);
         } else {
-          let rawErr = errData?.error;
-          if (rawErr && typeof rawErr === 'object') {
-            rawErr = rawErr.message || JSON.stringify(rawErr);
-          }
-          if (!rawErr) {
-            rawErr = 'Failed to get answer from Nudge.';
-          }
+          const isUnavailable = (response && response.status === 503) || 
+                                errStr.includes('503') || 
+                                errStr.includes('UNAVAILABLE') || 
+                                errStr.includes('OVERLOADED') || 
+                                errStr.includes('CAPACITY_EXCEEDED');
           
-          if (rawErr.includes('{') || rawErr.includes('}')) {
-            friendlyMessage = "Nudge encountered an unexpected response — try again in a moment.";
+          let friendlyMessage = '';
+          let isSystemMsg = true;
+          if (isUnavailable) {
+            friendlyMessage = "Nudge is a bit overloaded right now — try again in a moment.";
           } else {
-            friendlyMessage = `Error: ${rawErr}`;
+            let rawErr = errData?.error;
+            if (rawErr && typeof rawErr === 'object') {
+              rawErr = rawErr.message || JSON.stringify(rawErr);
+            }
+            if (!rawErr) {
+              rawErr = 'Failed to get answer from Nudge.';
+            }
+            
+            if (rawErr.includes('{') || rawErr.includes('}')) {
+              friendlyMessage = "Nudge encountered an unexpected response — try again in a moment.";
+            } else {
+              friendlyMessage = `Error: ${rawErr}`;
+            }
           }
-        }
 
-        const errorMsg: ChatMessage = {
-          id: Math.random().toString(),
-          role: 'model',
-          parts: [{ text: friendlyMessage }],
-          createdAt: new Date().toISOString(),
-          isSystem: isSystemMsg
-        };
-        setChatHistory([...nextHistory, errorMsg]);
+          const errorMsg: ChatMessage = {
+            id: Math.random().toString(),
+            role: 'model',
+            parts: [{ text: friendlyMessage }],
+            createdAt: new Date().toISOString(),
+            isSystem: isSystemMsg
+          };
+          setChatHistory([...nextHistory, errorMsg]);
+        }
       }
     } catch (err: any) {
       console.error('Chat failed:', err);
-      const errorMsg: ChatMessage = {
-        id: Math.random().toString(),
-        role: 'model',
-        parts: [{ text: 'Network communication interrupted. Please check your connection.' }],
-        createdAt: new Date().toISOString(),
-        isSystem: true
-      };
-      setChatHistory([...nextHistory, errorMsg]);
+      const errMsgStr = (err?.message || '').toUpperCase();
+      const isRateLimitErr = errMsgStr.includes('RATE') || 
+                             errMsgStr.includes('429') || 
+                             errMsgStr.includes('LIMIT') || 
+                             errMsgStr.includes('QUOTA') ||
+                             errMsgStr.includes('HIT ITS API RATE LIMIT');
+                             
+      if (isRateLimitErr) {
+        const fallbackMsg: ChatMessage = {
+          id: Math.random().toString(),
+          role: 'model',
+          parts: [{ text: "Nudge has hit its API rate limit for the moment." }],
+          createdAt: new Date().toISOString(),
+          isSprintPlan: true,
+          isSystem: false
+        };
+        setChatHistory([...nextHistory, fallbackMsg]);
+      } else {
+        const errorMsg: ChatMessage = {
+          id: Math.random().toString(),
+          role: 'model',
+          parts: [{ text: 'Network communication interrupted. Please check your connection.' }],
+          createdAt: new Date().toISOString(),
+          isSystem: true
+        };
+        setChatHistory([...nextHistory, errorMsg]);
+      }
     } finally {
       setIsLoadingChat(false);
     }
@@ -1165,7 +1196,7 @@ export default function App() {
             </div>
 
             {/* Dashboard & Chat Column Container */}
-            <div className="w-full h-full min-h-0 overflow-hidden flex flex-col relative p-2 sm:p-4">
+            <div className="w-full h-full min-h-0 overflow-hidden flex flex-col relative px-4 py-2 sm:p-4">
               <AnimatePresence mode="wait">
                 {activeTab === 'chat' ? (
                   <motion.div

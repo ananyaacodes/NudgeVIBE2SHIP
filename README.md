@@ -1,20 +1,231 @@
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
+
+# 🚀 The Last-Minute Life Saver
+
+### *Your AI Productivity Companion That Helps You Finish Tasks, Not Just Remember Them.*
+
+<p>
+Built for <b>Vibe2Ship Hackathon 2026</b><br>
+Coding Ninjas × Google Developer Groups
+</p>
+
+![Google AI Studio](https://img.shields.io/badge/Google%20AI%20Studio-4285F4?style=for-the-badge&logo=google&logoColor=white)
+![Gemini](https://img.shields.io/badge/Gemini-AI-8E75FF?style=for-the-badge)
+![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+
 </div>
 
-# Run and deploy your AI Studio app
+---
 
-This contains everything you need to run your app locally.
+# 🌟 Overview
 
-View your app in AI Studio: https://ai.studio/apps/a2335aaf-5a61-4526-a36b-acc1533722d9
+**The Last-Minute Life Saver** is an AI-powered productivity companion that goes beyond traditional reminders.
 
-## Run Locally
+Instead of simply notifying users about upcoming deadlines, it actively analyzes priorities, workload, urgency, and available time to generate intelligent action plans that help users complete their tasks before it's too late.
 
-**Prerequisites:**  Node.js
+Whether it's an assignment, interview, meeting, project submission, or bill payment, the app transforms procrastination into productivity using the power of **Gemini AI**.
 
+---
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+# 🎯 Problem Statement
+
+Students, professionals, and entrepreneurs frequently miss important deadlines because existing productivity apps rely heavily on passive reminders that are easy to ignore.
+
+The challenge was to build an AI-powered assistant that doesn't just remind users—but actually helps them take meaningful action before deadlines are missed.
+
+---
+
+# ✨ Key Features
+
+- 🧠 AI-powered Task Prioritization
+- 📅 Intelligent Daily Scheduling
+- 🚨 Panic Mode for Urgent Deadlines
+- 🎯 Goal & Habit Tracking
+- 📊 Productivity Insights
+- 🔔 Context-aware Smart Reminders
+- 📆 Google Calendar Integration
+- 🎙️ Voice-enabled Productivity Assistant
+- 🤖 Personalized AI Productivity Recommendations
+
+---
+
+# 🛠️ Tech Stack
+
+| Technology | Purpose |
+|------------|----------|
+| Google AI Studio | Application Development |
+| Gemini API | AI Task Planning & Recommendations |
+| React | Frontend |
+| TypeScript | Application Logic |
+| Firebase | Authentication & Database |
+| Firestore | Data Storage |
+| Tailwind CSS | Responsive UI |
+
+---
+
+# 🏗️ Architecture
+
+```
+                User
+                  │
+                  ▼
+        React + TypeScript Frontend
+                  │
+                  ▼
+            Gemini AI Engine
+                  │
+        ┌─────────┼─────────┐
+        ▼         ▼         ▼
+ Task Analysis  Smart Plan  Scheduling
+        │         │         │
+        └─────────┼─────────┘
+                  ▼
+        Personalized Productivity
+                  │
+                  ▼
+         Calendar & Notifications
+```
+
+---
+
+# 🚀 How It Works
+
+1. User adds tasks and deadlines.
+2. Gemini AI analyzes urgency and workload.
+3. Tasks are prioritized intelligently.
+4. A personalized schedule is generated.
+5. Smart reminders and productivity suggestions are provided.
+6. Users complete tasks before deadlines instead of merely being reminded.
+
+---
+
+# 📸 Screenshots
+
+> *(Add screenshots of your application here before final submission.)*
+
+### Dashboard
+
+<img src="screenshots/dashboard.png" width="900">
+
+### AI Task Planner
+
+<img src="screenshots/planner.png" width="900">
+
+### Smart Scheduler
+
+<img src="screenshots/scheduler.png" width="900">
+
+---
+
+# 🎥 Demo
+
+**Live Application**
+
+> **<Paste your Google AI Studio deployment link here>**
+
+---
+
+# 📂 Run Locally
+
+### Clone Repository
+
+```bash
+git clone https://github.com/<your-username>/<repository-name>.git
+```
+
+### Navigate into the project
+
+```bash
+cd <repository-name>
+```
+
+### Install dependencies
+
+```bash
+npm install
+```
+
+### Start development server
+
+```bash
+npm run dev
+```
+
+---
+
+# 📁 Project Structure
+
+```
+src/
+│
+├── components/
+├── pages/
+├── hooks/
+├── services/
+├── utils/
+├── assets/
+├── App.tsx
+└── main.tsx
+```
+
+---
+
+# 🎯 Future Improvements
+
+- 📱 Mobile App
+- ⌚ Wearable Device Support
+- 📧 Email & WhatsApp Smart Notifications
+- 🤝 Team Productivity Dashboard
+- 📈 Advanced AI Analytics
+- 🌍 Multi-language Support
+
+---
+
+# 👥 Team
+
+**Team Name:** <Your Team Name>
+
+| Name | Role |
+|------|------|
+| Ananya Raj | AI Developer & Frontend |
+| <Member 2> | Backend |
+| <Member 3> | UI/UX |
+
+---
+
+# 🏆 Hackathon
+
+**Vibe2Ship Hackathon 2026**
+
+Organized by:
+
+**Coding Ninjas × Google Developer Groups**
+
+---
+
+# ❤️ Acknowledgements
+
+- Google AI Studio
+- Gemini API
+- Firebase
+- React
+- TypeScript
+- Coding Ninjas
+- Google Developer Groups
+
+---
+
+# 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+<div align="center">
+
+### ⭐ If you like this project, consider giving it a star!
+
+</div>
